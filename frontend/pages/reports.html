@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>التقارير - نظام الحضور المدرسي</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/reports.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- Global Database Module -->
+    <script src="../js/database.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="logo">
+          <h2>إدارة المدرسة</h2>
+          <button
+            id="themeToggle"
+            class="theme-toggle"
+            title="تبديل الوضع المظلم"
+          >
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+        <ul class="nav-links">
+          <li>
+            <a href="../index.html"><i class="fas fa-home"></i> لوحة التحكم</a>
+          </li>
+          <li>
+            <a href="students.html"
+              ><i class="fas fa-user-graduate"></i> الطلاب</a
+            >
+          </li>
+          <li>
+            <a href="teachers.html"
+              ><i class="fas fa-chalkboard-teacher"></i> المعلمون</a
+            >
+          </li>
+          <li>
+            <a href="classes.html"><i class="fas fa-school"></i> الفصول</a>
+          </li>
+          <li>
+            <a href="attendance.html"
+              ><i class="fas fa-calendar-check"></i> الحضور</a
+            >
+          </li>
+          <li class="active">
+            <a href="reports.html"><i class="fas fa-chart-bar"></i> التقارير</a>
+          </li>
+          <li>
+            <a href="settings.html"><i class="fas fa-cog"></i> الإعدادات</a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header>
+          <div class="header-content">
+            <h1>التقارير</h1>
+            <div class="user-info">
+              <span class="user-name">المدير</span>
+              <i class="fas fa-user-circle"></i>
+            </div>
+          </div>
+        </header>
+
+        <div class="dashboard-content">
+          <!-- Reports Navigation -->
+          <div class="reports-nav">
+            <button class="report-tab active" data-report="attendance">
+              <i class="fas fa-calendar-check"></i> تقارير الحضور
+            </button>
+            <button class="report-tab" data-report="students">
+              <i class="fas fa-user-graduate"></i> تقارير الطلاب
+            </button>
+            <button class="report-tab" data-report="classes">
+              <i class="fas fa-school"></i> تقارير الفصول
+            </button>
+          </div>
+
+          <!-- Reports Content -->
+          <div class="reports-content">
+            <!-- Attendance Reports -->
+            <div class="report-panel active" id="attendance-report">
+              <div class="report-filters-card">
+                <div class="card-header">
+                  <h2>تقارير الحضور</h2>
+                </div>
+                <div class="card-body">
+                  <div class="report-filters">
+                    <div class="filter-group">
+                      <label for="periodFilter">الفترة</label>
+                      <select
+                        id="periodFilter"
+                        class="filter-select"
+                        title="اختر الفترة"
+                      >
+                        <option value="week">الأسبوع الماضي</option>
+                        <option value="month" selected>الشهر الماضي</option>
+                        <option value="trimester">الفصل الدراسي</option>
+                        <option value="year">السنة الدراسية</option>
+                        <option value="custom">فترة محددة</option>
+                      </select>
+                    </div>
+
+                    <div
+                      class="filter-group custom-date-range"
+                      style="display: none"
+                    >
+                      <div class="date-range-container">
+                        <div class="date-input-group">
+                          <label for="startDate">من</label>
+                          <input
+                            type="date"
+                            id="startDate"
+                            class="date-input"
+                            title="تاريخ البداية"
+                          />
+                        </div>
+                        <div class="date-input-group">
+                          <label for="endDate">إلى</label>
+                          <input
+                            type="date"
+                            id="endDate"
+                            class="date-input"
+                            title="تاريخ النهاية"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="filter-group">
+                      <label for="classReportFilter">الفصل</label>
+                      <select
+                        id="classReportFilter"
+                        class="filter-select"
+                        title="اختر الفصل"
+                      >
+                        <option value="">جميع الفصول</option>
+                      </select>
+                    </div>
+
+                    <button id="generateReportBtn" class="btn-primary">
+                      <i class="fas fa-sync-alt"></i> إنشاء التقرير
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Attendance Summary Card -->
+              <div class="report-card">
+                <div class="card-header">
+                  <h2>ملخص الحضور</h2>
+                  <div class="card-actions">
+                    <button id="printAttendanceSummary" class="btn-secondary">
+                      <i class="fas fa-print"></i> طباعة
+                    </button>
+                    <button id="exportAttendanceSummary" class="btn-secondary">
+                      <i class="fas fa-file-export"></i> تصدير
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="summary-stats">
+                    <div class="summary-stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                      </div>
+                      <div class="stat-details">
+                        <h3>إجمالي الطلاب</h3>
+                        <p id="totalStudentsCount">0</p>
+                      </div>
+                    </div>
+                    <div class="summary-stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-calendar-day"></i>
+                      </div>
+                      <div class="stat-details">
+                        <h3>أيام الدراسة</h3>
+                        <p id="totalDaysCount">0</p>
+                      </div>
+                    </div>
+                    <div class="summary-stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                      </div>
+                      <div class="stat-details">
+                        <h3>متوسط الحضور</h3>
+                        <p id="averageAttendance">0%</p>
+                      </div>
+                    </div>
+                    <div class="summary-stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-times-circle"></i>
+                      </div>
+                      <div class="stat-details">
+                        <h3>متوسط الغياب</h3>
+                        <p id="averageAbsence">0%</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="chart-container">
+                    <canvas id="attendanceTrendChart"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Attendance By Class Card -->
+              <div class="report-card">
+                <div class="card-header">
+                  <h2>الحضور حسب الفصل</h2>
+                  <div class="card-actions">
+                    <button id="printAttendanceByClass" class="btn-secondary">
+                      <i class="fas fa-print"></i> طباعة
+                    </button>
+                    <button id="exportAttendanceByClass" class="btn-secondary">
+                      <i class="fas fa-file-export"></i> تصدير
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container">
+                    <canvas id="attendanceByClassChart"></canvas>
+                  </div>
+
+                  <div class="table-container">
+                    <table class="data-table" id="attendanceByClassTable">
+                      <thead>
+                        <tr>
+                          <th>الفصل</th>
+                          <th>عدد الطلاب</th>
+                          <th>متوسط الحضور</th>
+                          <th>أعلى نسبة حضور</th>
+                          <th>أدنى نسبة حضور</th>
+                          <th>الإجراءات</th>
+                        </tr>
+                      </thead>
+                      <tbody id="attendanceByClassTableBody">
+                        <!-- Data will be loaded here dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Frequent Absences Card -->
+              <div class="report-card">
+                <div class="card-header">
+                  <h2>الطلاب الأكثر غياباً</h2>
+                  <div class="card-actions">
+                    <button id="printFrequentAbsences" class="btn-secondary">
+                      <i class="fas fa-print"></i> طباعة
+                    </button>
+                    <button id="exportFrequentAbsences" class="btn-secondary">
+                      <i class="fas fa-file-export"></i> تصدير
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="table-container">
+                    <table class="data-table" id="frequentAbsencesTable">
+                      <thead>
+                        <tr>
+                          <th>رقم التعريف</th>
+                          <th>اسم الطالب</th>
+                          <th>الفصل</th>
+                          <th>عدد أيام الغياب</th>
+                          <th>نسبة الغياب</th>
+                          <th>الإجراءات</th>
+                        </tr>
+                      </thead>
+                      <tbody id="frequentAbsencesTableBody">
+                        <!-- Data will be loaded here dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Students Reports -->
+            <div class="report-panel" id="students-report">
+              <div class="report-filters-card">
+                <div class="card-header">
+                  <h2>تقارير الطلاب</h2>
+                </div>
+                <div class="card-body">
+                  <div class="report-filters">
+                    <div class="filter-group">
+                      <label for="studentReportType">نوع التقرير</label>
+                      <select
+                        id="studentReportType"
+                        class="filter-select"
+                        title="اختر نوع التقرير"
+                      >
+                        <option value="distribution">توزيع الطلاب</option>
+                        <option value="attendance">حضور الطلاب</option>
+                        <option value="gender">توزيع الجنس</option>
+                      </select>
+                    </div>
+
+                    <div class="filter-group">
+                      <label for="studentClassFilter">الفصل</label>
+                      <select
+                        id="studentClassFilter"
+                        class="filter-select"
+                        title="اختر الفصل"
+                      >
+                        <option value="">جميع الفصول</option>
+                      </select>
+                    </div>
+
+                    <button id="generateStudentReportBtn" class="btn-primary">
+                      <i class="fas fa-sync-alt"></i> إنشاء التقرير
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Student Distribution Card -->
+              <div class="report-card">
+                <div class="card-header">
+                  <h2>توزيع الطلاب حسب الفصول</h2>
+                  <div class="card-actions">
+                    <button id="printStudentDistribution" class="btn-secondary">
+                      <i class="fas fa-print"></i> طباعة
+                    </button>
+                    <button
+                      id="exportStudentDistribution"
+                      class="btn-secondary"
+                    >
+                      <i class="fas fa-file-export"></i> تصدير
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container">
+                    <canvas id="studentDistributionChart"></canvas>
+                  </div>
+
+                  <div class="table-container">
+                    <table class="data-table" id="studentDistributionTable">
+                      <thead>
+                        <tr>
+                          <th>المستوى</th>
+                          <th>الشعبة</th>
+                          <th>القسم</th>
+                          <th>عدد الطلاب</th>
+                          <th>النسبة المئوية</th>
+                        </tr>
+                      </thead>
+                      <tbody id="studentDistributionTableBody">
+                        <!-- Data will be loaded here dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Student Gender Distribution Card -->
+              <div class="report-card">
+                <div class="card-header">
+                  <h2>توزيع الطلاب حسب الجنس</h2>
+                  <div class="card-actions">
+                    <button id="printGenderDistribution" class="btn-secondary">
+                      <i class="fas fa-print"></i> طباعة
+                    </button>
+                    <button id="exportGenderDistribution" class="btn-secondary">
+                      <i class="fas fa-file-export"></i> تصدير
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="gender-charts-container">
+                    <div class="gender-chart-wrapper">
+                      <h3>التوزيع الكلي</h3>
+                      <div class="chart-container chart-container-small">
+                        <canvas id="genderDistributionChart"></canvas>
+                      </div>
+                    </div>
+                    <div class="gender-chart-wrapper">
+                      <h3>التوزيع حسب المستوى</h3>
+                      <div class="chart-container chart-container-small">
+                        <canvas id="genderByLevelChart"></canvas>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="table-container">
+                    <table class="data-table" id="genderDistributionTable">
+                      <thead>
+                        <tr>
+                          <th>المستوى</th>
+                          <th>ذكور</th>
+                          <th>إناث</th>
+                          <th>النسبة (ذكور)</th>
+                          <th>النسبة (إناث)</th>
+                        </tr>
+                      </thead>
+                      <tbody id="genderDistributionTableBody">
+                        <!-- Data will be loaded here dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Classes Reports -->
+            <div class="report-panel" id="classes-report">
+              <div class="report-filters-card">
+                <div class="card-header">
+                  <h2>تقارير الفصول</h2>
+                </div>
+                <div class="card-body">
+                  <div class="report-filters">
+                    <div class="filter-group">
+                      <label for="classesReportType">نوع التقرير</label>
+                      <select
+                        id="classesReportType"
+                        class="filter-select"
+                        title="اختر نوع التقرير"
+                      >
+                        <option value="structure">هيكل الفصول</option>
+                        <option value="attendance">حضور الفصول</option>
+                        <option value="comparison">مقارنة الفصول</option>
+                      </select>
+                    </div>
+
+                    <div class="filter-group">
+                      <label for="levelFilter">المستوى</label>
+                      <select
+                        id="levelFilter"
+                        class="filter-select"
+                        title="اختر المستوى"
+                      >
+                        <option value="">جميع المستويات</option>
+                      </select>
+                    </div>
+
+                    <button id="generateClassesReportBtn" class="btn-primary">
+                      <i class="fas fa-sync-alt"></i> إنشاء التقرير
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Classes Structure Card -->
+              <div class="report-card">
+                <div class="card-header">
+                  <h2>هيكل الفصول</h2>
+                  <div class="card-actions">
+                    <button id="printClassesStructure" class="btn-secondary">
+                      <i class="fas fa-print"></i> طباعة
+                    </button>
+                    <button id="exportClassesStructure" class="btn-secondary">
+                      <i class="fas fa-file-export"></i> تصدير
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container">
+                    <canvas id="classesStructureChart"></canvas>
+                  </div>
+
+                  <div class="table-container">
+                    <table class="data-table" id="classesStructureTable">
+                      <thead>
+                        <tr>
+                          <th>المستوى</th>
+                          <th>عدد الشعب</th>
+                          <th>عدد الفصول</th>
+                          <th>عدد الطلاب</th>
+                          <th>متوسط عدد الطلاب في الفصل</th>
+                        </tr>
+                      </thead>
+                      <tbody id="classesStructureTableBody">
+                        <!-- Data will be loaded here dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Classes Comparison Card -->
+              <div class="report-card">
+                <div class="card-header">
+                  <h2>مقارنة الفصول</h2>
+                  <div class="card-actions">
+                    <button id="printClassesComparison" class="btn-secondary">
+                      <i class="fas fa-print"></i> طباعة
+                    </button>
+                    <button id="exportClassesComparison" class="btn-secondary">
+                      <i class="fas fa-file-export"></i> تصدير
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="filters-row">
+                    <div class="filter-group">
+                      <label for="comparisonMetric">معيار المقارنة</label>
+                      <select
+                        id="comparisonMetric"
+                        class="filter-select"
+                        title="اختر معيار المقارنة"
+                      >
+                        <option value="attendance">نسبة الحضور</option>
+                        <option value="absences">عدد الغيابات</option>
+                        <option value="students">عدد الطلاب</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="chart-container">
+                    <canvas id="classesComparisonChart"></canvas>
+                  </div>
+
+                  <div class="table-container">
+                    <table class="data-table" id="classesComparisonTable">
+                      <thead>
+                        <tr>
+                          <th>الفصل</th>
+                          <th>عدد الطلاب</th>
+                          <th>نسبة الحضور</th>
+                          <th>عدد الغيابات</th>
+                          <th>الترتيب</th>
+                        </tr>
+                      </thead>
+                      <tbody id="classesComparisonTableBody">
+                        <!-- Data will be loaded here dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Scripts -->
+    <script src="../js/reports.js"></script>
+  </body>
+</html>

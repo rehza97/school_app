@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>اختبار واجهة برمجة التطبيقات</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      .api-test-container {
+        padding: 20px;
+      }
+
+      .api-section {
+        background-color: var(--card-bg);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .api-section h2 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 10px;
+      }
+
+      .endpoints {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+      }
+
+      .endpoint {
+        background-color: var(--bg-secondary);
+        border-radius: 6px;
+        padding: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .endpoint:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .endpoint h3 {
+        margin-top: 0;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+      }
+
+      .method {
+        font-size: 12px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+        color: white;
+        font-weight: bold;
+      }
+
+      .get {
+        background-color: #61affe;
+      }
+      .post {
+        background-color: #49cc90;
+      }
+      .put {
+        background-color: #fca130;
+      }
+      .delete {
+        background-color: #f93e3e;
+      }
+
+      .endpoint p {
+        margin: 8px 0;
+        font-size: 14px;
+        color: var(--text-secondary);
+      }
+
+      .results {
+        margin-top: 30px;
+      }
+
+      .results h2 {
+        margin-bottom: 15px;
+      }
+
+      .results pre {
+        background-color: var(--code-bg);
+        border-radius: 6px;
+        padding: 15px;
+        overflow: auto;
+        max-height: 300px;
+        color: var(--code-color);
+        font-family: monospace;
+      }
+
+      .form-container {
+        background-color: var(--bg-secondary);
+        border-radius: 6px;
+        padding: 15px;
+        margin-top: 20px;
+        display: none;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+      }
+
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 8px 12px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        background-color: var(--input-bg);
+        color: var(--text-primary);
+      }
+
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="logo">
+          <h2>إدارة المدرسة</h2>
+          <button
+            id="themeToggle"
+            class="theme-toggle"
+            title="تبديل الوضع المظلم"
+          >
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+        <ul class="nav-links">
+          <li>
+            <a href="../index.html"><i class="fas fa-home"></i> لوحة التحكم</a>
+          </li>
+          <li>
+            <a href="./students.html"
+              ><i class="fas fa-user-graduate"></i> الطلاب</a
+            >
+          </li>
+          <li>
+            <a href="./teachers.html"
+              ><i class="fas fa-chalkboard-teacher"></i> المعلمون</a
+            >
+          </li>
+          <li>
+            <a href="./classes.html"><i class="fas fa-school"></i> الفصول</a>
+          </li>
+          <li>
+            <a href="./attendance.html"
+              ><i class="fas fa-calendar-check"></i> الحضور</a
+            >
+          </li>
+          <li>
+            <a href="./reports.html"
+              ><i class="fas fa-chart-bar"></i> التقارير</a
+            >
+          </li>
+          <li>
+            <a href="./settings.html"><i class="fas fa-cog"></i> الإعدادات</a>
+          </li>
+          <li class="active">
+            <a href="./api-test.html"><i class="fas fa-code"></i> اختبار API</a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header>
+          <div class="header-content">
+            <h1>اختبار واجهة برمجة التطبيقات</h1>
+            <div class="user-info">
+              <span class="user-name">المدير</span>
+              <i class="fas fa-user-circle"></i>
+            </div>
+          </div>
+        </header>
+
+        <div class="api-test-container">
+          <div class="api-section">
+            <h2>إعدادات الاتصال</h2>
+            <div class="form-group">
+              <label for="apiUrl">عنوان الخادم</label>
+              <input
+                type="text"
+                id="apiUrl"
+                value="http://localhost:3000"
+                placeholder="أدخل عنوان الخادم"
+              />
+            </div>
+            <div class="form-group">
+              <label for="apiKey">مفتاح API</label>
+              <input
+                type="text"
+                id="apiKey"
+                value="school-management-secret-key"
+                placeholder="أدخل مفتاح API"
+              />
+            </div>
+          </div>
+
+          <!-- Teachers API -->
+          <div class="api-section">
+            <h2>واجهة برمجة المعلمين</h2>
+            <div class="endpoints">
+              <div
+                class="endpoint"
+                data-endpoint="/api/teachers"
+                data-method="GET"
+              >
+                <h3>
+                  <span class="method get">GET</span> الحصول على جميع المعلمين
+                </h3>
+                <p>استرجاع قائمة بجميع المعلمين النشطين</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/teachers/:id"
+                data-method="GET"
+                data-requires-id="true"
+              >
+                <h3><span class="method get">GET</span> الحصول على معلم</h3>
+                <p>استرجاع معلومات معلم محدد بناءً على المعرف</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/teachers"
+                data-method="POST"
+                data-has-form="teacher-form"
+              >
+                <h3><span class="method post">POST</span> إضافة معلم جديد</h3>
+                <p>إضافة معلم جديد إلى قاعدة البيانات</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/teachers/:id"
+                data-method="PUT"
+                data-requires-id="true"
+                data-has-form="teacher-form"
+              >
+                <h3><span class="method put">PUT</span> تحديث معلم</h3>
+                <p>تحديث معلومات معلم موجود</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/teachers/:id"
+                data-method="DELETE"
+                data-requires-id="true"
+              >
+                <h3><span class="method delete">DELETE</span> حذف معلم</h3>
+                <p>حذف معلم (حذف ناعم)</p>
+              </div>
+            </div>
+
+            <!-- Teacher Form -->
+            <div class="form-container" id="teacher-form">
+              <h3>نموذج المعلم</h3>
+              <div class="form-group">
+                <label for="teacherId">المعرف (للتحديث فقط)</label>
+                <input
+                  type="number"
+                  id="teacherId"
+                  placeholder="أدخل معرف المعلم"
+                />
+              </div>
+              <div class="form-group">
+                <label for="teacherFirstName">الاسم الأول</label>
+                <input
+                  type="text"
+                  id="teacherFirstName"
+                  placeholder="أدخل الاسم الأول"
+                />
+              </div>
+              <div class="form-group">
+                <label for="teacherLastName">الاسم الأخير</label>
+                <input
+                  type="text"
+                  id="teacherLastName"
+                  placeholder="أدخل الاسم الأخير"
+                />
+              </div>
+              <div class="form-group">
+                <label for="teacherSubject">المادة</label>
+                <input
+                  type="text"
+                  id="teacherSubject"
+                  placeholder="أدخل المادة"
+                />
+              </div>
+              <div class="form-group">
+                <label for="teacherBirthDate">تاريخ الميلاد</label>
+                <input type="date" id="teacherBirthDate" />
+              </div>
+              <div class="form-group">
+                <label for="teacherPosition">المنصب</label>
+                <input
+                  type="text"
+                  id="teacherPosition"
+                  placeholder="أدخل المنصب"
+                />
+              </div>
+              <div class="form-actions">
+                <button class="btn-secondary cancel-form">إلغاء</button>
+                <button class="btn-primary submit-form">إرسال</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Students API -->
+          <div class="api-section">
+            <h2>واجهة برمجة الطلاب</h2>
+            <div class="endpoints">
+              <div
+                class="endpoint"
+                data-endpoint="/api/students"
+                data-method="GET"
+              >
+                <h3>
+                  <span class="method get">GET</span> الحصول على جميع الطلاب
+                </h3>
+                <p>استرجاع قائمة بجميع الطلاب النشطين</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/students/:id"
+                data-method="GET"
+                data-requires-id="true"
+              >
+                <h3><span class="method get">GET</span> الحصول على طالب</h3>
+                <p>استرجاع معلومات طالب محدد بناءً على المعرف</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/students"
+                data-method="POST"
+                data-has-form="student-form"
+              >
+                <h3><span class="method post">POST</span> إضافة طالب جديد</h3>
+                <p>إضافة طالب جديد إلى قاعدة البيانات</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/students/:id"
+                data-method="PUT"
+                data-requires-id="true"
+                data-has-form="student-form"
+              >
+                <h3><span class="method put">PUT</span> تحديث طالب</h3>
+                <p>تحديث معلومات طالب موجود</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/students/:id"
+                data-method="DELETE"
+                data-requires-id="true"
+              >
+                <h3><span class="method delete">DELETE</span> حذف طالب</h3>
+                <p>حذف طالب (حذف ناعم)</p>
+              </div>
+            </div>
+
+            <!-- Student Form -->
+            <div class="form-container" id="student-form">
+              <h3>نموذج الطالب</h3>
+              <div class="form-group">
+                <label for="studentId">المعرف (للتحديث فقط)</label>
+                <input
+                  type="number"
+                  id="studentId"
+                  placeholder="أدخل معرف الطالب"
+                />
+              </div>
+              <div class="form-group">
+                <label for="studentFirstName">الاسم الأول</label>
+                <input
+                  type="text"
+                  id="studentFirstName"
+                  placeholder="أدخل الاسم الأول"
+                />
+              </div>
+              <div class="form-group">
+                <label for="studentLastName">الاسم الأخير</label>
+                <input
+                  type="text"
+                  id="studentLastName"
+                  placeholder="أدخل الاسم الأخير"
+                />
+              </div>
+              <div class="form-group">
+                <label for="studentBirthDate">تاريخ الميلاد</label>
+                <input type="date" id="studentBirthDate" />
+              </div>
+              <div class="form-group">
+                <label for="studentGender">الجنس</label>
+                <select id="studentGender">
+                  <option value="ذكر">ذكر</option>
+                  <option value="أنثى">أنثى</option>
+                </select>
+              </div>
+              <div class="form-actions">
+                <button class="btn-secondary cancel-form">إلغاء</button>
+                <button class="btn-primary submit-form">إرسال</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sections API -->
+          <div class="api-section">
+            <h2>واجهة برمجة الفصول</h2>
+            <div class="endpoints">
+              <div
+                class="endpoint"
+                data-endpoint="/api/sections"
+                data-method="GET"
+              >
+                <h3>
+                  <span class="method get">GET</span> الحصول على جميع الفصول
+                </h3>
+                <p>استرجاع قائمة بجميع الفصول النشطة</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/sections/:id"
+                data-method="GET"
+                data-requires-id="true"
+              >
+                <h3><span class="method get">GET</span> الحصول على فصل</h3>
+                <p>استرجاع معلومات فصل محدد بناءً على المعرف</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/sections"
+                data-method="POST"
+                data-has-form="section-form"
+              >
+                <h3><span class="method post">POST</span> إضافة فصل جديد</h3>
+                <p>إضافة فصل جديد إلى قاعدة البيانات</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/sections/:id"
+                data-method="PUT"
+                data-requires-id="true"
+                data-has-form="section-form"
+              >
+                <h3><span class="method put">PUT</span> تحديث فصل</h3>
+                <p>تحديث معلومات فصل موجود</p>
+              </div>
+              <div
+                class="endpoint"
+                data-endpoint="/api/sections/:id"
+                data-method="DELETE"
+                data-requires-id="true"
+              >
+                <h3><span class="method delete">DELETE</span> حذف فصل</h3>
+                <p>حذف فصل (حذف ناعم)</p>
+              </div>
+            </div>
+
+            <!-- Section Form -->
+            <div class="form-container" id="section-form">
+              <h3>نموذج الفصل</h3>
+              <div class="form-group">
+                <label for="sectionId">المعرف (للتحديث فقط)</label>
+                <input
+                  type="number"
+                  id="sectionId"
+                  placeholder="أدخل معرف الفصل"
+                />
+              </div>
+              <div class="form-group">
+                <label for="sectionName">اسم الفصل</label>
+                <input
+                  type="text"
+                  id="sectionName"
+                  placeholder="أدخل اسم الفصل"
+                />
+              </div>
+              <div class="form-group">
+                <label for="sectionCapacity">السعة</label>
+                <input
+                  type="number"
+                  id="sectionCapacity"
+                  value="30"
+                  min="1"
+                  max="100"
+                />
+              </div>
+              <div class="form-group">
+                <label for="sectionTeacherId">معرف المعلم</label>
+                <input
+                  type="number"
+                  id="sectionTeacherId"
+                  placeholder="أدخل معرف المعلم"
+                />
+              </div>
+              <div class="form-actions">
+                <button class="btn-secondary cancel-form">إلغاء</button>
+                <button class="btn-primary submit-form">إرسال</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Results -->
+          <div class="api-section results">
+            <h2>النتائج</h2>
+            <pre id="results">اختر نقطة نهاية API للاختبار...</pre>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Custom Scripts -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Theme Toggle
+        const themeToggle = document.getElementById("themeToggle");
+        const body = document.body;
+
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+          body.classList.add("dark-theme");
+          themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        }
+
+        themeToggle.addEventListener("click", function () {
+          body.classList.toggle("dark-theme");
+
+          if (body.classList.contains("dark-theme")) {
+            localStorage.setItem("theme", "dark");
+            themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+          } else {
+            localStorage.setItem("theme", "light");
+            themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+          }
+        });
+
+        // API Testing
+        const endpoints = document.querySelectorAll(".endpoint");
+        const resultsContainer = document.getElementById("results");
+        const apiUrlInput = document.getElementById("apiUrl");
+        const apiKeyInput = document.getElementById("apiKey");
+        let currentForm = null;
+        let currentEndpoint = null;
+        let currentMethod = null;
+
+        // Show notification
+        function showNotification(message, type = "success") {
+          const notificationContainer = document.getElementById(
+            "notificationContainer"
+          );
+          const notification = document.createElement("div");
+          notification.className = `notification ${type}`;
+          notification.innerHTML = `
+                    <div class="notification-content">
+                        <i class="fas ${
+                          type === "success"
+                            ? "fa-check-circle"
+                            : "fa-exclamation-circle"
+                        }"></i>
+                        <span>${message}</span>
+                    </div>
+                `;
+
+          notificationContainer.appendChild(notification);
+
+          // Auto remove after 3 seconds
+          setTimeout(() => {
+            notification.classList.add("fade-out");
+            setTimeout(() => {
+              notification.remove();
+            }, 300);
+          }, 3000);
+        }
+
+        // Handle endpoint click
+        endpoints.forEach((endpoint) => {
+          endpoint.addEventListener("click", function () {
+            const endpointUrl = this.dataset.endpoint;
+            const method = this.dataset.method;
+            const requiresId = this.dataset.requiresId === "true";
+            const formId = this.dataset.hasForm;
+
+            currentEndpoint = endpointUrl;
+            currentMethod = method;
+
+            // Show form if needed
+            if (formId) {
+              const forms = document.querySelectorAll(".form-container");
+              forms.forEach((form) => (form.style.display = "none"));
+
+              const form = document.getElementById(formId);
+              form.style.display = "block";
+              currentForm = formId;
+
+              // Set up form for editing if PUT
+              if (method === "PUT" && requiresId) {
+                const idField = form.querySelector('input[id$="Id"]');
+                if (idField) {
+                  idField.disabled = false;
+                  idField.required = true;
+                }
+              }
+            } else if (requiresId) {
+              // Ask for ID if required
+              const id = prompt("أدخل المعرف:");
+              if (id) {
+                const finalEndpoint = endpointUrl.replace(":id", id);
+                callApi(finalEndpoint, method);
+              }
+            } else {
+              // Directly call API for methods that don't require extra data
+              callApi(endpointUrl, method);
+            }
+          });
+        });
+
+        // Handle form submission
+        document.querySelectorAll(".submit-form").forEach((button) => {
+          button.addEventListener("click", function () {
+            const form = this.closest(".form-container");
+            const formId = form.id;
+
+            let data = {};
+            let id = null;
+
+            // Gather form data based on form type
+            if (formId === "teacher-form") {
+              id = document.getElementById("teacherId").value;
+              data = {
+                firstName: document.getElementById("teacherFirstName").value,
+                lastName: document.getElementById("teacherLastName").value,
+                subject: document.getElementById("teacherSubject").value,
+                birthDate: document.getElementById("teacherBirthDate").value,
+                position: document.getElementById("teacherPosition").value,
+              };
+            } else if (formId === "student-form") {
+              id = document.getElementById("studentId").value;
+              data = {
+                firstName: document.getElementById("studentFirstName").value,
+                lastName: document.getElementById("studentLastName").value,
+                birthDate: document.getElementById("studentBirthDate").value,
+                gender: document.getElementById("studentGender").value,
+              };
+            } else if (formId === "section-form") {
+              id = document.getElementById("sectionId").value;
+              data = {
+                name: document.getElementById("sectionName").value,
+                capacity: document.getElementById("sectionCapacity").value,
+                teacherId:
+                  document.getElementById("sectionTeacherId").value || null,
+              };
+            }
+
+            // Validate required fields
+            if (currentMethod === "PUT" && !id) {
+              showNotification("المعرف مطلوب للتحديث", "error");
+              return;
+            }
+
+            if (
+              (currentMethod === "POST" || currentMethod === "PUT") &&
+              ((formId === "teacher-form" &&
+                (!data.firstName || !data.lastName)) ||
+                (formId === "student-form" &&
+                  (!data.firstName || !data.lastName)) ||
+                (formId === "section-form" && !data.name))
+            ) {
+              showNotification("يرجى ملء جميع الحقول المطلوبة", "error");
+              return;
+            }
+
+            // Prepare endpoint
+            let finalEndpoint = currentEndpoint;
+            if (currentMethod === "PUT" || currentMethod === "DELETE") {
+              finalEndpoint = currentEndpoint.replace(":id", id);
+            }
+
+            // Call API
+            callApi(finalEndpoint, currentMethod, data);
+
+            // Hide form
+            form.style.display = "none";
+          });
+        });
+
+        // Handle form cancellation
+        document.querySelectorAll(".cancel-form").forEach((button) => {
+          button.addEventListener("click", function () {
+            const form = this.closest(".form-container");
+            form.style.display = "none";
+            currentForm = null;
+          });
+        });
+
+        // API call function
+        function callApi(endpoint, method, data = null) {
+          const baseUrl = apiUrlInput.value.trim();
+          const apiKey = apiKeyInput.value.trim();
+          const url = `${baseUrl}${endpoint}`;
+
+          // Show loading message
+          resultsContainer.textContent = "جارٍ تنفيذ الطلب...";
+
+          const options = {
+            method: method,
+            headers: {
+              "Content-Type": "application/json",
+              "X-API-Key": apiKey,
+            },
+          };
+
+          if (data && (method === "POST" || method === "PUT")) {
+            options.body = JSON.stringify(data);
+          }
+
+          fetch(url, options)
+            .then((response) => {
+              const statusCode = response.status;
+              return response.json().then((data) => {
+                return { statusCode, data };
+              });
+            })
+            .then(({ statusCode, data }) => {
+              // Format and display results
+              const resultObj = {
+                status: statusCode,
+                data: data,
+              };
+
+              resultsContainer.textContent = JSON.stringify(resultObj, null, 2);
+
+              // Show notification
+              if (statusCode >= 200 && statusCode < 300) {
+                showNotification("تم تنفيذ الطلب بنجاح", "success");
+              } else {
+                showNotification(`خطأ: ${data.error || "حدث خطأ ما"}`, "error");
+              }
+            })
+            .catch((error) => {
+              resultsContainer.textContent = JSON.stringify(
+                { error: error.message },
+                null,
+                2
+              );
+              showNotification(`خطأ الاتصال: ${error.message}`, "error");
+            });
+        }
+      });
+    </script>
+  </body>
+</html>

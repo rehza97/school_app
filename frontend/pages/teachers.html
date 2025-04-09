@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>إدارة المعلمين | نظام إدارة المدرسة</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/teachers.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- Add SheetJS library -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <!-- Global Database Module -->
+    <script src="../js/database.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="logo">
+          <h2>إدارة المدرسة</h2>
+          <button
+            id="themeToggle"
+            class="theme-toggle"
+            title="تبديل الوضع المظلم"
+          >
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+        <ul class="nav-links">
+          <li>
+            <a href="../index.html"><i class="fas fa-home"></i> لوحة التحكم</a>
+          </li>
+          <li>
+            <a href="./students.html"
+              ><i class="fas fa-user-graduate"></i> الطلاب</a
+            >
+          </li>
+          <li class="active">
+            <a href="./teachers.html"
+              ><i class="fas fa-chalkboard-teacher"></i> المعلمون</a
+            >
+          </li>
+          <li>
+            <a href="./classes.html"><i class="fas fa-school"></i> الفصول</a>
+          </li>
+          <li>
+            <a href="./attendance.html"
+              ><i class="fas fa-calendar-check"></i> الحضور</a
+            >
+          </li>
+          <li>
+            <a href="./reports.html"
+              ><i class="fas fa-chart-bar"></i> التقارير</a
+            >
+          </li>
+          <li>
+            <a href="./settings.html"><i class="fas fa-cog"></i> الإعدادات</a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header>
+          <div class="header-content">
+            <h1>إدارة المعلمين</h1>
+            <div class="user-info">
+              <span class="user-name">المدير</span>
+              <i class="fas fa-user-circle"></i>
+            </div>
+          </div>
+        </header>
+
+        <div class="dashboard-content">
+          <!-- Stats -->
+          <div class="stats-container">
+            <div class="stat-card">
+              <i class="fas fa-chalkboard-teacher"></i>
+              <div class="stat-info">
+                <h3>إجمالي المعلمين</h3>
+                <p id="totalTeachers">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-user-check"></i>
+              <div class="stat-info">
+                <h3>المعلمون النشطون</h3>
+                <p id="activeTeachers">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-book"></i>
+              <div class="stat-info">
+                <h3>عدد المواد</h3>
+                <p id="totalSubjects">0</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Import Section -->
+          <div class="card import-card">
+            <div class="card-header">
+              <h2>استيراد بيانات المعلمين</h2>
+            </div>
+            <div class="card-body">
+              <div class="import-info">
+                <p>
+                  قم بتحميل ملف Excel يحتوي على بيانات المعلمين. يجب أن يحتوي
+                  الملف على الأعمدة التالية:
+                </p>
+                <ul>
+                  <li>المدرس / الأستاذ (اسم المعلم)</li>
+                  <li>المادة (المادة التي يدرسها)</li>
+                </ul>
+              </div>
+              <div class="file-upload-container">
+                <input
+                  type="file"
+                  id="excelFile"
+                  accept=".xlsx, .xls"
+                  style="display: none"
+                />
+                <button class="file-upload-btn" id="fileUploadBtn">
+                  <i class="fas fa-upload"></i> اختيار ملف Excel
+                </button>
+                <span id="selectedFileName" class="selected-file-name"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Teachers Section -->
+          <div class="card">
+            <div class="card-header">
+              <h2>قائمة المعلمين</h2>
+              <button id="addTeacherBtn" class="btn-primary">
+                <i class="fas fa-plus"></i> إضافة معلم
+              </button>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="card-body">
+              <div class="filter-box">
+                <div class="search-container">
+                  <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="البحث عن معلم..."
+                    class="search-input"
+                  />
+                  <i class="fas fa-search search-icon"></i>
+                </div>
+                <div class="filter-container">
+                  <select
+                    id="subjectFilter"
+                    class="filter-select"
+                    title="تصفية حسب المادة"
+                  >
+                    <option value="">جميع المواد</option>
+                  </select>
+                  <select
+                    id="statusFilter"
+                    class="filter-select"
+                    title="تصفية حسب الحالة"
+                  >
+                    <option value="">جميع الحالات</option>
+                    <option value="active">نشط</option>
+                    <option value="inactive">غير نشط</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Teachers Table -->
+              <div class="table-container">
+                <table id="teachersTable" class="data-table">
+                  <thead>
+                    <tr>
+                      <th>الصورة</th>
+                      <th>الرمز الوظيفي</th>
+                      <th>اللقب</th>
+                      <th>الاسم</th>
+                      <th>تاريخ الازدياد</th>
+                      <th>الرتبة</th>
+                      <th>المادة</th>
+                      <th>الدرجة</th>
+                      <th>تاريخ الترسيم</th>
+                      <th>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="teachersTableBody">
+                    <!-- Teachers data will be loaded here dynamically -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination -->
+              <div class="pagination">
+                <button id="prevPage" class="pagination-btn">
+                  <i class="fas fa-chevron-right"></i> السابق
+                </button>
+                <div id="pageNumbers" class="page-numbers">
+                  <!-- Page numbers will be added here -->
+                </div>
+                <div class="page-info">الصفحة 1 من 1</div>
+                <button id="nextPage" class="pagination-btn">
+                  التالي <i class="fas fa-chevron-left"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preview Section -->
+          <div
+            class="preview-section"
+            id="previewSection"
+            style="display: none"
+          >
+            <div class="card">
+              <div class="card-header">
+                <h2>معاينة البيانات</h2>
+              </div>
+              <div class="card-body">
+                <div class="preview-controls">
+                  <span class="record-count"
+                    >عدد السجلات: <span id="recordCount">0</span></span
+                  >
+                  <div class="preview-buttons">
+                    <button id="cancelBtn" class="btn-secondary">
+                      <i class="fas fa-times"></i> إلغاء
+                    </button>
+                    <button id="uploadBtn" class="btn-primary">
+                      <i class="fas fa-upload"></i> استيراد البيانات
+                    </button>
+                  </div>
+                </div>
+                <div class="preview-table-wrapper">
+                  <table id="previewTable" class="preview-table">
+                    <!-- Table content will be dynamically added here -->
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Add/Edit Teacher Modal -->
+    <div id="teacherModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle">إضافة معلم جديد</h2>
+          <span class="close">&times;</span>
+        </div>
+        <form id="teacherForm">
+          <input type="hidden" id="teacherId" />
+          <div class="form-group">
+            <label for="teacherName">اسم المعلم</label>
+            <input
+              type="text"
+              id="teacherName"
+              required
+              placeholder="أدخل اسم المعلم"
+            />
+          </div>
+          <div class="form-group">
+            <label for="teacherSubject">المادة</label>
+            <select id="teacherSubject" required>
+              <option value="">اختر المادة</option>
+              <!-- Options will be populated dynamically -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="teacherRole">الرتبة</label>
+            <select id="teacherRole" required>
+              <option value="">اختر الرتبة</option>
+              <!-- Options will be populated dynamically -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="teacherStatus">الحالة</label>
+            <select id="teacherStatus" required>
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="teacherPhone">رقم الهاتف</label>
+            <input type="tel" id="teacherPhone" placeholder="أدخل رقم الهاتف" />
+          </div>
+          <div class="form-group">
+            <label for="teacherEmail">البريد الإلكتروني</label>
+            <input
+              type="email"
+              id="teacherEmail"
+              placeholder="أدخل البريد الإلكتروني"
+            />
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="cancelModalBtn" class="btn-secondary">
+              إلغاء
+            </button>
+            <button type="submit" class="btn-primary">حفظ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Export Button -->
+    <button
+      id="exportExcelBtn"
+      class="btn-primary export-btn"
+      title="تصدير البيانات"
+    >
+      <i class="fas fa-file-export"></i>
+    </button>
+
+    <!-- Scripts -->
+    <script src="../js/utils.js"></script>
+    <script src="../js/teachers.js"></script>
+  </body>
+</html>

@@ -1,0 +1,1 @@
+<!-- Global Database Module -->\n    <script src="../js/database.js"></script>\n    <!-- Database Connector -->\n    <script src="../js/db-connector.js"></script>

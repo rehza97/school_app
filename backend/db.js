@@ -1,0 +1,550 @@
+const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
+
+// Create database connection
+const dbPath = path.join(__dirname, "school.db");
+console.log("Database path:", dbPath);
+
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error("Error connecting to database:", err);
+  } else {
+    console.log("Connected to SQLite database");
+    // Check if tables exist before initializing
+    db.get(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='students'",
+      [],
+      (err, row) => {
+        if (err) {
+          console.error("Error checking database tables:", err);
+          return;
+        }
+
+        if (!row) {
+          // Tables don't exist, create them but don't populate with mock data
+          console.log("Database tables don't exist, creating schema...");
+          initDatabaseSchema();
+        } else {
+          console.log("Database tables already exist, skipping initialization");
+        }
+      }
+    );
+  }
+});
+
+// Initialize database tables without mock data
+function initDatabaseSchema() {
+  console.log("Initializing database tables...");
+  db.serialize(() => {
+    // Create education_level table (السنة - level of student)
+    console.log("Creating education_level table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS education_level (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE,                    -- اسم المستوى التعليمي
+        description TEXT,                    -- وصف المستوى
+        active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating education_level table:", err);
+        else console.log("Education level table created successfully");
+      }
+    );
+
+    // Create specialty table (الشعبة - student specialty)
+    console.log("Creating specialty table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS specialty (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE,                    -- اسم التخصص
+        description TEXT,                    -- وصف التخصص
+        active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating specialty table:", err);
+        else console.log("Specialty table created successfully");
+      }
+    );
+
+    // Create education_system table (نظام التمدرس - intern/extern)
+    console.log("Creating education_system table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS education_system (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE,                    -- اسم نظام التمدرس
+        description TEXT,                    -- وصف النظام
+        active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating education_system table:", err);
+        else console.log("Education system table created successfully");
+      }
+    );
+
+    // Create sections table
+    console.log("Creating sections table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS sections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE,                    -- اسم القسم
+        capacity INTEGER,                    -- سعة القسم
+        year TEXT,                           -- السنة الدراسية
+        teacher_id INTEGER,                  -- المعلم المسؤول
+        education_level_id INTEGER,          -- مستوى التعليم لهذا القسم
+        specialty_id INTEGER,                -- تخصص القسم
+        description TEXT,                    -- وصف القسم
+        active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (teacher_id) REFERENCES teachers (id),
+        FOREIGN KEY (education_level_id) REFERENCES education_level (id),
+        FOREIGN KEY (specialty_id) REFERENCES specialty (id)
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating sections table:", err);
+        else console.log("Sections table created successfully");
+      }
+    );
+
+    // Create students table with updated Arabic column names
+    console.log("Creating students table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS students (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        registration_id TEXT UNIQUE,           -- رقم التعريف
+        last_name TEXT,                        -- اللقب
+        first_name TEXT,                       -- الاسم
+        gender TEXT,                           -- الجنس
+        birth_date TEXT,                       -- تاريخ الازدياد
+        birth_place TEXT,                      -- مكان الازدياد
+        birth_by_judgment TEXT,                -- مولود بحكم
+        birth_certificate TEXT,                -- عقد الميلاد
+        birth_record_year TEXT,                -- سنة التسجيل في سجل الولادات
+        birth_certificate_number TEXT,         -- رقم عقد الميلاد
+        registration_number TEXT,              -- رقم القيد
+        registration_date TEXT,                -- تاريخ التسجيل بالمدرسة
+        education_level_id INTEGER,            -- السنة (مستوى الطالب في المدرسة)
+        specialty_id INTEGER,                  -- الشعبة (تخصص الطالب)
+        section_id INTEGER,                    -- القسم (مكان الدراسة داخل المدرسة)
+        education_system_id INTEGER,           -- نظام التمدرس (داخلي أو خارجي)
+        active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (education_level_id) REFERENCES education_level (id),
+        FOREIGN KEY (specialty_id) REFERENCES specialty (id),
+        FOREIGN KEY (section_id) REFERENCES sections (id),
+        FOREIGN KEY (education_system_id) REFERENCES education_system (id)
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating students table:", err);
+        else console.log("Students table created successfully");
+      }
+    );
+
+    // Create teacher_roles table
+    console.log("Creating teacher_roles table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS teacher_roles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating teacher_roles table:", err);
+        else console.log("Teacher_roles table created successfully");
+      }
+    );
+
+    // Create subjects table
+    console.log("Creating subjects table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS subjects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating subjects table:", err);
+        else console.log("Subjects table created successfully");
+      }
+    );
+
+    // Create or update teachers table with all required fields
+    console.log("Creating teachers table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS teachers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        registration_id TEXT UNIQUE,
+        first_name TEXT,
+        last_name TEXT,
+        gender TEXT,
+        birth_date TEXT,
+        photo_path TEXT,
+        role_id INTEGER,
+        subject_id INTEGER,
+        level INTEGER,
+        start_date TEXT,
+        email TEXT,
+        phone TEXT,
+        active INTEGER DEFAULT 1,
+        FOREIGN KEY (role_id) REFERENCES teacher_roles(id),
+        FOREIGN KEY (subject_id) REFERENCES subjects(id)
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating teachers table:", err);
+        else console.log("Teachers table created successfully");
+      }
+    );
+
+    // Create student_section table for many-to-many relationship
+    console.log("Creating student_section table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS student_section (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,         -- معرف الطالب
+        section_id INTEGER NOT NULL,         -- معرف القسم
+        academic_year TEXT,                  -- السنة الأكاديمية
+        enrollment_date TEXT,                -- تاريخ التسجيل
+        status TEXT DEFAULT 'active',        -- حالة التسجيل
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(student_id, section_id, academic_year),
+        FOREIGN KEY (student_id) REFERENCES students (id),
+        FOREIGN KEY (section_id) REFERENCES sections (id)
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating student_section table:", err);
+        else console.log("Student_section table created successfully");
+      }
+    );
+
+    // Create teacher_subject table for many-to-many relationship
+    console.log("Creating teacher_subject table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS teacher_subject (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacher_id INTEGER NOT NULL,         -- معرف المعلم
+        subject_id INTEGER NOT NULL,         -- معرف المادة
+        academic_year TEXT,                  -- السنة الأكاديمية
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(teacher_id, subject_id, academic_year),
+        FOREIGN KEY (teacher_id) REFERENCES teachers (id),
+        FOREIGN KEY (subject_id) REFERENCES subjects (id)
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating teacher_subject table:", err);
+        else console.log("Teacher_subject table created successfully");
+      }
+    );
+
+    // Create class_schedule table
+    console.log("Creating class_schedule table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS class_schedule (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        section_id INTEGER NOT NULL,         -- معرف القسم
+        teacher_id INTEGER NOT NULL,         -- معرف المعلم
+        subject_id INTEGER NOT NULL,         -- معرف المادة
+        day_of_week INTEGER,                 -- يوم الأسبوع (1-7)
+        start_time TEXT,                     -- وقت البدء
+        end_time TEXT,                       -- وقت الانتهاء
+        room TEXT,                           -- القاعة
+        active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(section_id, teacher_id, subject_id, day_of_week, start_time),
+        FOREIGN KEY (section_id) REFERENCES sections (id),
+        FOREIGN KEY (teacher_id) REFERENCES teachers (id),
+        FOREIGN KEY (subject_id) REFERENCES subjects (id)
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating class_schedule table:", err);
+        else console.log("Class_schedule table created successfully");
+      }
+    );
+
+    // Create attendance table
+    console.log("Creating attendance table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,         -- معرف الطالب
+        class_schedule_id INTEGER NOT NULL,  -- معرف الحصة الدراسية
+        attendance_date TEXT NOT NULL,       -- تاريخ الحضور
+        status TEXT NOT NULL,                -- الحالة (present, absent, late, excused)
+        notes TEXT,                          -- ملاحظات
+        created_by INTEGER,                  -- من سجل الحضور
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(student_id, class_schedule_id, attendance_date),
+        FOREIGN KEY (student_id) REFERENCES students (id),
+        FOREIGN KEY (class_schedule_id) REFERENCES class_schedule (id),
+        FOREIGN KEY (created_by) REFERENCES teachers (id)
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating attendance table:", err);
+        else console.log("Attendance table created successfully");
+      }
+    );
+
+    // Create attendance_summary table for quick statistics
+    console.log("Creating attendance_summary table...");
+    db.run(
+      `
+      CREATE TABLE IF NOT EXISTS attendance_summary (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,         -- معرف الطالب
+        section_id INTEGER NOT NULL,         -- معرف القسم
+        subject_id INTEGER,                  -- معرف المادة
+        academic_year TEXT,                  -- السنة الأكاديمية
+        month INTEGER,                       -- الشهر
+        present_count INTEGER DEFAULT 0,     -- عدد مرات الحضور
+        absent_count INTEGER DEFAULT 0,      -- عدد مرات الغياب
+        late_count INTEGER DEFAULT 0,        -- عدد مرات التأخير
+        excused_count INTEGER DEFAULT 0,     -- عدد مرات الاستئذان
+        last_updated DATETIME,               -- آخر تحديث
+        UNIQUE(student_id, section_id, subject_id, academic_year, month),
+        FOREIGN KEY (student_id) REFERENCES students (id),
+        FOREIGN KEY (section_id) REFERENCES sections (id),
+        FOREIGN KEY (subject_id) REFERENCES subjects (id)
+      )
+    `,
+      [],
+      (err) => {
+        if (err) console.error("Error creating attendance_summary table:", err);
+        else console.log("Attendance_summary table created successfully");
+      }
+    );
+
+    console.log("Database tables initialization completed");
+  });
+}
+
+// Functions for seeding data - keep these but don't call them automatically
+function seedEducationLevels() {
+  const levels = [
+    { name: "السنة الأولى", description: "المستوى الأول من الدراسة" },
+    { name: "السنة الثانية", description: "المستوى الثاني من الدراسة" },
+    { name: "السنة الثالثة", description: "المستوى الثالث من الدراسة" },
+    { name: "السنة الرابعة", description: "المستوى الرابع من الدراسة" },
+    { name: "السنة الخامسة", description: "المستوى الخامس من الدراسة" },
+    { name: "السنة السادسة", description: "المستوى السادس من الدراسة" },
+  ];
+
+  // Check if there are existing records
+  db.get("SELECT COUNT(*) as count FROM education_level", [], (err, row) => {
+    if (err) {
+      console.error("Error checking education levels:", err);
+      return;
+    }
+
+    // Only seed if table is empty
+    if (row.count === 0) {
+      console.log("Seeding education levels...");
+      levels.forEach((level) => {
+        db.run(
+          "INSERT INTO education_level (name, description) VALUES (?, ?)",
+          [level.name, level.description],
+          (err) => {
+            if (err) console.error("Error seeding education level:", err);
+          }
+        );
+      });
+    } else {
+      console.log("Education levels table already has data, skipping seed");
+    }
+  });
+}
+
+function seedSpecialties() {
+  const specialties = [
+    { name: "علمي", description: "تخصص العلوم الطبيعية والفيزيائية" },
+    { name: "أدبي", description: "تخصص العلوم الإنسانية والأدبية" },
+    { name: "رياضي", description: "تخصص الرياضيات والإحصاء" },
+    { name: "فني", description: "تخصص التقنيات والفنون التطبيقية" },
+    {
+      name: "جذع مشترك آداب",
+      description: "تخصص مشترك للعلوم الأدبية والإنسانية",
+    },
+  ];
+
+  // Check if there are existing records
+  db.get("SELECT COUNT(*) as count FROM specialty", [], (err, row) => {
+    if (err) {
+      console.error("Error checking specialties:", err);
+      return;
+    }
+
+    // Only seed if table is empty
+    if (row.count === 0) {
+      console.log("Seeding specialties...");
+      specialties.forEach((specialty) => {
+        db.run(
+          "INSERT INTO specialty (name, description) VALUES (?, ?)",
+          [specialty.name, specialty.description],
+          (err) => {
+            if (err) console.error("Error seeding specialty:", err);
+          }
+        );
+      });
+    } else {
+      console.log("Specialties table already has data, skipping seed");
+    }
+  });
+}
+
+function seedEducationSystems() {
+  const systems = [
+    { name: "داخلي", description: "طالب مقيم داخل المدرسة" },
+    { name: "خارجي", description: "طالب غير مقيم داخل المدرسة" },
+  ];
+
+  // Check if there are existing records
+  db.get("SELECT COUNT(*) as count FROM education_system", [], (err, row) => {
+    if (err) {
+      console.error("Error checking education systems:", err);
+      return;
+    }
+
+    // Only seed if table is empty
+    if (row.count === 0) {
+      console.log("Seeding education systems...");
+      systems.forEach((system) => {
+        db.run(
+          "INSERT INTO education_system (name, description) VALUES (?, ?)",
+          [system.name, system.description],
+          (err) => {
+            if (err) console.error("Error seeding education system:", err);
+          }
+        );
+      });
+    } else {
+      console.log("Education systems table already has data, skipping seed");
+    }
+  });
+}
+
+function seedSections() {
+  // We will add sections after education levels and specialties are created
+  setTimeout(() => {
+    // First, get the education levels
+    db.all("SELECT * FROM education_level", [], (err, educationLevels) => {
+      if (err) {
+        console.error("Error retrieving education levels:", err);
+        return;
+      }
+
+      // Then get the specialties
+      db.all("SELECT * FROM specialty", [], (err, specialties) => {
+        if (err) {
+          console.error("Error retrieving specialties:", err);
+          return;
+        }
+
+        // Check if there are existing records in the sections table
+        db.get("SELECT COUNT(*) as count FROM sections", [], (err, row) => {
+          if (err) {
+            console.error("Error checking sections:", err);
+            return;
+          }
+
+          // Only seed if table is empty
+          if (row.count === 0) {
+            console.log("Seeding sections...");
+
+            // Add special case sections
+            const specialSections = [
+              {
+                name: "جذع مشترك آداب",
+                capacity: 40,
+                description: "قسم مشترك للعلوم الأدبية",
+              },
+              {
+                name: "جذع مشترك علوم",
+                capacity: 40,
+                description: "قسم مشترك للعلوم الطبيعية",
+              },
+            ];
+
+            specialSections.forEach((section) => {
+              // Try to find appropriate specialty ID
+              const specialty = specialties.find(
+                (s) => s.name === section.name || s.name === "أدبي"
+              );
+              const specialtyId = specialty ? specialty.id : null;
+
+              // Use the first education level ID for these sections
+              const educationLevelId =
+                educationLevels.length > 0 ? educationLevels[0].id : null;
+
+              db.run(
+                "INSERT INTO sections (name, capacity, education_level_id, specialty_id, active, description) VALUES (?, ?, ?, ?, 1, ?)",
+                [
+                  section.name,
+                  section.capacity,
+                  educationLevelId,
+                  specialtyId,
+                  section.description,
+                ],
+                (err) => {
+                  if (err) {
+                    console.error(
+                      `Error seeding special section ${section.name}:`,
+                      err
+                    );
+                  } else {
+                    console.log(`Added special section: ${section.name}`);
+                  }
+                }
+              );
+            });
+          } else {
+            console.log("Sections table already has data, skipping seed");
+          }
+        });
+      });
+    });
+  }, 1000); // Wait 1 second to ensure education levels and specialties are created first
+}
+
+// Export API for creating reference data manually when needed
+const seedApi = {
+  seedEducationLevels,
+  seedSpecialties,
+  seedEducationSystems,
+  seedSections,
+};
+
+module.exports = { db, seedApi };

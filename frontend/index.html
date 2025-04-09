@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>لوحة تحكم نظام الحضور المدرسي</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- Add SheetJS library -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <!-- Global Database Module -->
+    <script src="js/database.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="logo">
+          <h2>إدارة المدرسة</h2>
+          <button
+            id="themeToggle"
+            class="theme-toggle"
+            title="تبديل الوضع المظلم"
+          >
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+        <ul class="nav-links">
+          <li class="active">
+            <a href="./index.html"><i class="fas fa-home"></i> لوحة التحكم</a>
+          </li>
+          <li>
+            <a href="./pages/students.html"
+              ><i class="fas fa-user-graduate"></i> الطلاب</a
+            >
+          </li>
+          <li>
+            <a href="./pages/teachers.html"
+              ><i class="fas fa-chalkboard-teacher"></i> المعلمون</a
+            >
+          </li>
+          <li>
+            <a href="./pages/classes.html"
+              ><i class="fas fa-school"></i> الفصول</a
+            >
+          </li>
+          <li>
+            <a href="./pages/attendance.html"
+              ><i class="fas fa-calendar-check"></i> الحضور</a
+            >
+          </li>
+          <li>
+            <a href="./pages/reports.html"
+              ><i class="fas fa-chart-bar"></i> التقارير</a
+            >
+          </li>
+          <li>
+            <a href="./pages/settings.html"
+              ><i class="fas fa-cog"></i> الإعدادات</a
+            >
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header>
+          <div class="header-content">
+            <h1>لوحة التحكم</h1>
+            <div class="user-info">
+              <div class="connectivity-status">
+                <span id="backendStatus" class="status-indicator offline">
+                  <i class="fas fa-circle"></i>
+                  <span class="status-text">غير متصل</span>
+                </span>
+              </div>
+              <span class="user-name">المدير</span>
+              <i class="fas fa-user-circle"></i>
+            </div>
+          </div>
+        </header>
+
+        <div class="dashboard-content">
+          <!-- Quick Stats -->
+          <div class="stats-container">
+            <div class="stat-card">
+              <i class="fas fa-user-graduate"></i>
+              <div class="stat-info">
+                <h3>إجمالي الطلاب</h3>
+                <p id="totalStudents">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-chalkboard-teacher"></i>
+              <div class="stat-info">
+                <h3>إجمالي المعلمين</h3>
+                <p id="totalTeachers">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-school"></i>
+              <div class="stat-info">
+                <h3>إجمالي الفصول</h3>
+                <p id="totalClasses">0</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload Section -->
+          <div class="upload-section">
+            <h2>استيراد البيانات</h2>
+            <div class="upload-buttons">
+              <div class="upload-card">
+                <h3>استيراد بيانات المعلمين</h3>
+                <div class="drag-drop-zone" id="teacherDragDropZone">
+                  <div class="upload-container">
+                    <div class="file-input-wrapper">
+                      <i class="fas fa-chalkboard-teacher"></i>
+                      <p>اسحب وأفلت ملف المعلمين هنا أو</p>
+                      <label for="teacherExcelFile" class="file-label">
+                        <span>اختر ملف المعلمين</span>
+                      </label>
+                      <input
+                        type="file"
+                        id="teacherExcelFile"
+                        accept=".xlsx, .xls"
+                        title="حدد ملف Excel للمعلمين"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div
+              class="preview-section"
+              id="previewSection"
+              style="display: none"
+            >
+              <h3>معاينة البيانات</h3>
+              <div class="preview-controls">
+                <span class="record-count"
+                  >عدد السجلات: <span id="recordCount">0</span></span
+                >
+                <div class="preview-buttons">
+                  <button id="cancelBtn" class="btn-secondary">
+                    <i class="fas fa-times"></i> إلغاء
+                  </button>
+                  <button id="uploadBtn" class="btn-primary">
+                    <i class="fas fa-upload"></i> رفع الملف
+                  </button>
+                </div>
+              </div>
+              <div class="preview-table-wrapper">
+                <table id="previewTable" class="preview-table">
+                  <!-- Table content will be dynamically added here -->
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Activity -->
+          <div class="recent-activity">
+            <h2>النشاطات الأخيرة</h2>
+            <div class="activity-list" id="activityList">
+              <!-- Activity items will be dynamically added here -->
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Custom Scripts -->
+    <script src="js/main.js"></script>
+  </body>
+</html>

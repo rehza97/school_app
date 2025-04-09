@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>إدارة الفصول | نظام إدارة المدرسة</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/classes.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- XLSX Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Global Database Module -->
+    <script src="../js/database.js"></script>
+    <!-- Utility Functions -->
+    <script src="../js/utils.js"></script>
+    <!-- Classes Management -->
+    <script src="../js/classes.js"></script>
+    <!-- Classes Initialization -->
+    <script src="../js/classes-init.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="logo">
+          <h2>إدارة المدرسة</h2>
+          <button
+            id="themeToggle"
+            class="theme-toggle"
+            title="تبديل الوضع المظلم"
+          >
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+        <ul class="nav-links">
+          <li>
+            <a href="../index.html"><i class="fas fa-home"></i> لوحة التحكم</a>
+          </li>
+          <li>
+            <a href="./students.html"
+              ><i class="fas fa-user-graduate"></i> الطلاب</a
+            >
+          </li>
+          <li>
+            <a href="./teachers.html"
+              ><i class="fas fa-chalkboard-teacher"></i> المعلمون</a
+            >
+          </li>
+          <li class="active">
+            <a href="./classes.html"><i class="fas fa-school"></i> الفصول</a>
+          </li>
+          <li>
+            <a href="./attendance.html"
+              ><i class="fas fa-calendar-check"></i> الحضور</a
+            >
+          </li>
+          <li>
+            <a href="./reports.html"
+              ><i class="fas fa-chart-bar"></i> التقارير</a
+            >
+          </li>
+          <li>
+            <a href="./settings.html"><i class="fas fa-cog"></i> الإعدادات</a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header>
+          <div class="header-content">
+            <h1>إدارة الفصول</h1>
+            <div class="user-info">
+              <span class="user-name">المدير</span>
+              <i class="fas fa-user-circle"></i>
+            </div>
+          </div>
+        </header>
+
+        <div class="dashboard-content">
+          <!-- Stats -->
+          <div class="stats-container">
+            <div class="stat-card">
+              <i class="fas fa-chart-bar"></i>
+              <div class="stat-info">
+                <h3>السنوات الدراسية</h3>
+                <p id="totalLevels">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-list-alt"></i>
+              <div class="stat-info">
+                <h3>الشعب</h3>
+                <p id="totalSpecialties">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-school"></i>
+              <div class="stat-info">
+                <h3>الأقسام</h3>
+                <p id="totalSections">0</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hierarchy Management -->
+          <div class="card">
+            <div class="card-header">
+              <h2>الهيكل التنظيمي للفصول</h2>
+              <div class="header-actions">
+                <button id="expandAllBtn" class="btn-secondary">
+                  <i class="fas fa-expand-alt"></i> توسيع الكل
+                </button>
+                <button id="collapseAllBtn" class="btn-secondary">
+                  <i class="fas fa-compress-alt"></i> طي الكل
+                </button>
+                <button id="addLevelBtn" class="btn-primary">
+                  <i class="fas fa-plus"></i> إضافة سنة دراسية
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="hierarchy-tree" id="hierarchyTree">
+                <!-- Hierarchy tree will be added here dynamically -->
+              </div>
+
+              <!-- Empty state message -->
+              <div id="emptyState" class="empty-state" style="display: none">
+                <i class="fas fa-school empty-icon"></i>
+                <h3>لا توجد بيانات للعرض</h3>
+                <p>
+                  قم بإضافة سنة دراسية جديدة للبدء في إنشاء الهيكل التنظيمي
+                  للفصول
+                </p>
+                <button id="addFirstLevelBtn" class="btn-primary">
+                  <i class="fas fa-plus"></i> إضافة سنة دراسية
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Class Students -->
+          <div class="card" id="classStudentsCard" style="display: none">
+            <div class="card-header">
+              <h2>طلاب الفصل: <span id="selectedClassName">-</span></h2>
+              <button id="closeClassViewBtn" class="btn-secondary">
+                <i class="fas fa-times"></i> إغلاق
+              </button>
+            </div>
+            <div class="card-body">
+              <div class="filter-box">
+                <div class="search-container">
+                  <input
+                    type="text"
+                    id="studentSearchInput"
+                    placeholder="البحث عن طالب..."
+                    class="search-input"
+                  />
+                  <i class="fas fa-search search-icon"></i>
+                </div>
+              </div>
+
+              <!-- Students Table -->
+              <div class="table-container">
+                <table id="classStudentsTable" class="data-table">
+                  <thead>
+                    <tr>
+                      <th>الرقم التسلسلي</th>
+                      <th>رقم التعريف</th>
+                      <th>اللقب</th>
+                      <th>الاسم</th>
+                      <th>تاريخ الميلاد</th>
+                      <th>الجنس</th>
+                      <th>الحالة</th>
+                      <th>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="classStudentsTableBody">
+                    <!-- Students data will be loaded here dynamically -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination -->
+              <div class="pagination">
+                <button id="studentPrevPage" class="pagination-btn">
+                  <i class="fas fa-chevron-right"></i> السابق
+                </button>
+                <div id="studentPageNumbers" class="page-numbers">
+                  <!-- Page numbers will be added here -->
+                </div>
+                <button id="studentNextPage" class="pagination-btn">
+                  التالي <i class="fas fa-chevron-left"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Add Level Modal -->
+    <div id="levelModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="levelModalTitle">إضافة سنة دراسية</h3>
+          <span class="close" id="levelModalClose">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="levelForm">
+            <input type="hidden" id="levelId" />
+            <div class="form-group">
+              <label for="levelName">اسم السنة الدراسية</label>
+              <input
+                type="text"
+                id="levelName"
+                name="levelName"
+                required
+                placeholder="مثل: السنة الأولى، السنة الثانية، إلخ"
+              />
+            </div>
+            <div class="form-group">
+              <label for="levelDescription">وصف السنة الدراسية</label>
+              <textarea
+                id="levelDescription"
+                name="levelDescription"
+                rows="3"
+                placeholder="وصف مختصر للسنة الدراسية"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label for="levelCoordinator">منسق السنة الدراسية</label>
+              <select id="levelCoordinator" name="levelCoordinator">
+                <option value="">اختر منسق السنة الدراسية</option>
+                <!-- Teachers will be loaded dynamically -->
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="button" id="cancelLevelBtn" class="btn-secondary">
+                إلغاء
+              </button>
+              <button type="submit" class="btn-primary">حفظ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Specialty Modal -->
+    <div id="specialtyModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="specialtyModalTitle">إضافة شعبة</h3>
+          <span class="close" id="specialtyModalClose">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="specialtyForm">
+            <input type="hidden" id="specialtyId" />
+            <input type="hidden" id="specialtyLevelId" />
+            <div class="form-group">
+              <label for="specialtyName">اسم الشعبة</label>
+              <input
+                type="text"
+                id="specialtyName"
+                name="specialtyName"
+                required
+                placeholder="مثل: آداب، علوم، رياضيات، إلخ"
+              />
+            </div>
+            <div class="form-group">
+              <label for="specialtyDescription">وصف الشعبة</label>
+              <textarea
+                id="specialtyDescription"
+                name="specialtyDescription"
+                rows="3"
+                placeholder="وصف مختصر للشعبة"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label for="specialtyCoordinator">منسق الشعبة</label>
+              <select id="specialtyCoordinator" name="specialtyCoordinator">
+                <option value="">اختر منسق الشعبة</option>
+                <!-- Teachers will be loaded dynamically -->
+              </select>
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                id="cancelSpecialtyBtn"
+                class="btn-secondary"
+              >
+                إلغاء
+              </button>
+              <button type="submit" class="btn-primary">حفظ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Section Modal -->
+    <div id="sectionModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="sectionModalTitle">إضافة قسم</h3>
+          <span class="close" id="sectionModalClose">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="sectionForm">
+            <input type="hidden" id="sectionId" />
+            <input type="hidden" id="sectionSpecialtyId" />
+            <div class="form-group">
+              <label for="sectionName">اسم القسم</label>
+              <input
+                type="text"
+                id="sectionName"
+                name="sectionName"
+                required
+                placeholder="مثل: أ، ب، ج، إلخ"
+              />
+            </div>
+            <div class="form-group">
+              <label for="sectionCapacity">السعة القصوى</label>
+              <input
+                type="number"
+                id="sectionCapacity"
+                name="sectionCapacity"
+                required
+                min="1"
+                placeholder="عدد الطلاب الأقصى"
+              />
+            </div>
+            <div class="form-group">
+              <label for="sectionTeacher">المعلم المسؤول</label>
+              <select id="sectionTeacher" name="sectionTeacher">
+                <option value="">اختر المعلم المسؤول</option>
+                <!-- Teachers will be loaded dynamically -->
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="button" id="cancelSectionBtn" class="btn-secondary">
+                إلغاء
+              </button>
+              <button type="submit" class="btn-primary">حفظ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div id="confirmModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="confirmModalTitle">تأكيد الحذف</h3>
+          <span class="close" id="confirmModalClose">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p id="confirmModalMessage">هل أنت متأكد من حذف هذا العنصر؟</p>
+          <div class="form-actions">
+            <button type="button" id="cancelConfirmBtn" class="btn-secondary">
+              إلغاء
+            </button>
+            <button type="button" id="confirmBtn" class="btn-danger">
+              حذف
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Export Button -->
+    <button
+      id="exportExcelBtn"
+      class="btn-primary export-btn"
+      title="تصدير بيانات الفصول"
+    >
+      <i class="fas fa-file-export"></i>
+    </button>
+
+    <!-- Add Class Modal -->
+    <div id="classModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="classModalTitle">إضافة صف</h3>
+          <span class="close" id="classModalClose">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="classForm">
+            <input type="hidden" id="classId" />
+            <div class="form-group">
+              <label for="className">اسم الصف</label>
+              <input
+                type="text"
+                id="className"
+                required
+                placeholder="مثل: الصف الأول أ"
+              />
+            </div>
+            <div class="form-group">
+              <label for="classLevel">السنة الدراسية</label>
+              <select id="classLevel" required>
+                <option value="">اختر السنة الدراسية</option>
+                <!-- Levels will be loaded dynamically -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="classSpecialty">التخصص</label>
+              <select id="classSpecialty" required>
+                <option value="">اختر التخصص</option>
+                <!-- Specialties will be loaded dynamically -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="classTeacher">معلم الصف</label>
+              <select id="classTeacher" required>
+                <option value="">اختر معلم الصف</option>
+                <!-- Teachers will be loaded dynamically -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="classCapacity">السعة القصوى</label>
+              <input
+                type="number"
+                id="classCapacity"
+                required
+                min="1"
+                placeholder="أدخل العدد الأقصى للطلاب"
+              />
+            </div>
+            <div class="form-group">
+              <label for="classDescription">وصف الصف</label>
+              <textarea
+                id="classDescription"
+                rows="3"
+                placeholder="وصف مختصر للصف"
+              ></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" id="cancelClassBtn" class="btn-secondary">
+                إلغاء
+              </button>
+              <button type="submit" class="btn-primary">حفظ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

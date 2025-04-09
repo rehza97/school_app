@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>XLSX Library Test</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+  </head>
+  <body>
+    <h1>XLSX Library Test</h1>
+    <input type="file" id="fileInput" accept=".xlsx, .xls" />
+    <button id="testBtn">Test Library</button>
+    <div id="result"></div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("Page loaded");
+        console.log("XLSX available:", typeof XLSX !== "undefined");
+        console.log(
+          "XLSX version:",
+          typeof XLSX !== "undefined" ? XLSX.version : "not loaded"
+        );
+
+        // Test button
+        document
+          .getElementById("testBtn")
+          .addEventListener("click", function () {
+            document.getElementById("result").innerText =
+              "XLSX available: " +
+              (typeof XLSX !== "undefined") +
+              "\nVersion: " +
+              (typeof XLSX !== "undefined" ? XLSX.version : "not loaded");
+          });
+
+        // File input
+        document
+          .getElementById("fileInput")
+          .addEventListener("change", function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById("result").innerText =
+              "Loading file: " + file.name;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              try {
+                const data = e.target.result;
+                const workbook = XLSX.read(data, { type: "binary" });
+                const firstSheet = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheet];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+
+                document.getElementById("result").innerText =
+                  "File processed successfully\n" +
+                  "Sheets: " +
+                  workbook.SheetNames.join(", ") +
+                  "\n" +
+                  "Records: " +
+                  json.length +
+                  "\n" +
+                  "First record: " +
+                  JSON.stringify(json[0], null, 2);
+              } catch (error) {
+                document.getElementById("result").innerText =
+                  "Error: " + error.message;
+              }
+            };
+
+            reader.onerror = function () {
+              document.getElementById("result").innerText =
+                "Error reading file";
+            };
+
+            reader.readAsBinaryString(file);
+          });
+      });
+    </script>
+  </body>
+</html>

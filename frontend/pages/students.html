@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>الطلاب - نظام الحضور المدرسي</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>"
+    />
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/students.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- Add SheetJS library for Excel parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <!-- Global Database Module -->
+    <script src="../js/database.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="logo">
+          <h2>إدارة المدرسة</h2>
+          <button
+            id="themeToggle"
+            class="theme-toggle"
+            title="تبديل الوضع المظلم"
+          >
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+        <ul class="nav-links">
+          <li>
+            <a href="../index.html"><i class="fas fa-home"></i> لوحة التحكم</a>
+          </li>
+          <li class="active">
+            <a href="students.html"
+              ><i class="fas fa-user-graduate"></i> الطلاب</a
+            >
+          </li>
+          <li>
+            <a href="teachers.html"
+              ><i class="fas fa-chalkboard-teacher"></i> المعلمون</a
+            >
+          </li>
+          <li>
+            <a href="classes.html"><i class="fas fa-school"></i> الفصول</a>
+          </li>
+          <li>
+            <a href="attendance.html"
+              ><i class="fas fa-calendar-check"></i> الحضور</a
+            >
+          </li>
+          <li>
+            <a href="reports.html"><i class="fas fa-chart-bar"></i> التقارير</a>
+          </li>
+          <li>
+            <a href="settings.html"><i class="fas fa-cog"></i> الإعدادات</a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header>
+          <div class="header-content">
+            <h1>إدارة الطلاب</h1>
+            <div class="user-info">
+              <span class="user-name">المدير</span>
+              <i class="fas fa-user-circle"></i>
+            </div>
+          </div>
+        </header>
+
+        <div class="students-container">
+          <!-- Quick Stats -->
+          <div class="stats-container">
+            <div class="stat-card">
+              <i class="fas fa-users"></i>
+              <div class="stat-info">
+                <h3>إجمالي الطلاب</h3>
+                <p id="totalStudents">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-user-check"></i>
+              <div class="stat-info">
+                <h3>الطلاب النشطون</h3>
+                <p id="activeStudents">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-user-times"></i>
+              <div class="stat-info">
+                <h3>الطلاب غير النشطين</h3>
+                <p id="inactiveStudents">0</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data Import Section -->
+          <div class="content-card import-card">
+            <div class="card-header">
+              <h3>استيراد بيانات الطلاب</h3>
+            </div>
+            <div class="card-body">
+              <p class="import-info">
+                <i class="fas fa-info-circle"></i>
+                يمكنك استيراد بيانات الطلاب من ملف Excel. يجب أن يحتوي الملف على
+                الأعمدة التالية: رقم التعريف، اللقب، الاسم، الجنس، تاريخ
+                الميلاد، القسم، السنة، مكان الازدياد، رقم عقد الميلاد، عقد
+                الميلاد، نظام التدريس، الشعبة.
+              </p>
+              <div class="drag-drop-zone" id="studentDragDropZone">
+                <div class="upload-container">
+                  <div class="file-input-wrapper">
+                    <i class="fas fa-user-graduate"></i>
+                    <p>اسحب وأفلت ملف الطلاب هنا أو</p>
+                    <label for="studentExcelFile" class="file-label">
+                      <span>اختر ملف الطلاب</span>
+                    </label>
+                    <input
+                      type="file"
+                      id="studentExcelFile"
+                      accept=".xlsx, .xls"
+                      title="حدد ملف Excel للطلاب"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Excel Preview section -->
+              <div id="excel-preview" class="excel-preview"></div>
+            </div>
+          </div>
+
+          <!-- Preview Section -->
+          <div
+            class="content-card preview-card"
+            id="previewSection"
+            style="display: none"
+          >
+            <div class="card-header">
+              <h3>معاينة البيانات</h3>
+              <div class="preview-controls">
+                <span class="record-count"
+                  >عدد السجلات: <span id="recordCount">0</span></span
+                >
+                <div class="preview-buttons">
+                  <button id="cancelBtn" class="btn-secondary">
+                    <i class="fas fa-times"></i> إلغاء
+                  </button>
+                  <button id="uploadBtn" class="btn-primary">
+                    <i class="fas fa-upload"></i> رفع الملف
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="preview-table-wrapper">
+                <table id="previewTable" class="preview-table">
+                  <!-- Table content will be dynamically added here -->
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search and Filter Section -->
+          <div class="content-card">
+            <div class="card-header">
+              <div class="filters-section">
+                <div class="search-box">
+                  <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="بحث عن طالب..."
+                  />
+                  <i class="fas fa-search"></i>
+                </div>
+                <div class="filter-box">
+                  <select
+                    id="educationLevelFilter"
+                    title="تصفية حسب المستوى التعليمي"
+                  >
+                    <option value="">جميع المستويات</option>
+                    <!-- Education levels will be loaded dynamically -->
+                  </select>
+                  <select id="specialtyFilter" title="تصفية حسب التخصص">
+                    <option value="">جميع التخصصات</option>
+                    <!-- Specialties will be loaded dynamically -->
+                  </select>
+                  <select id="sectionFilter" title="تصفية حسب القسم">
+                    <option value="">جميع الأقسام</option>
+                    <!-- Sections will be loaded dynamically -->
+                  </select>
+                  <select
+                    id="educationSystemFilter"
+                    title="تصفية حسب نظام التمدرس"
+                  >
+                    <option value="">جميع أنظمة التمدرس</option>
+                    <!-- Education systems will be loaded dynamically -->
+                  </select>
+                  <select id="statusFilter" title="تصفية حسب الحالة">
+                    <option value="">جميع الحالات</option>
+                    <option value="active">نشط</option>
+                    <option value="inactive">غير نشط</option>
+                  </select>
+                </div>
+                <button id="addStudentBtn" class="btn-primary">
+                  <i class="fas fa-plus"></i> إضافة طالب
+                </button>
+              </div>
+            </div>
+
+            <!-- Students Table -->
+            <div class="table-wrapper">
+              <table class="data-table" id="studentsTable">
+                <thead>
+                  <tr>
+                    <th class="sortable" data-field="registration_id">
+                      رقم التعريف <span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable" data-field="first_name">
+                      الاسم <span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable" data-field="last_name">
+                      اللقب <span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable" data-field="gender">
+                      الجنس <span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable" data-field="birth_date">
+                      تاريخ الميلاد <span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable" data-field="education_level_name">
+                      المستوى التعليمي <span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable" data-field="specialty_name">
+                      التخصص <span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable" data-field="section_name">
+                      القسم <span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable" data-field="education_system_name">
+                      نظام التمدرس <span class="sort-indicator"></span>
+                    </th>
+                    <th class="sortable" data-field="active">
+                      الحالة <span class="sort-indicator"></span>
+                    </th>
+                    <th>الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="studentsTableBody">
+                  <!-- Table content will be dynamically added here -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination">
+              <button id="prevPage" class="btn-secondary">
+                <i class="fas fa-chevron-right"></i> السابق
+              </button>
+              <span class="page-info">
+                صفحة <span id="currentPage">1</span> من
+                <span id="totalPages">1</span>
+              </span>
+              <button id="nextPage" class="btn-secondary">
+                التالي <i class="fas fa-chevron-left"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div id="studentModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle">إضافة طالب</h2>
+          <button class="close-btn" title="إغلاق">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="studentForm">
+            <div class="form-grid">
+              <!-- Basic Information -->
+              <div class="form-section">
+                <h3>المعلومات الأساسية</h3>
+                <div class="form-group">
+                  <label for="studentId">رقم التعريف</label>
+                  <input
+                    type="text"
+                    id="studentId"
+                    name="registration_id"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="firstName">الاسم</label>
+                  <input
+                    type="text"
+                    id="firstName"
+                    name="first_name"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="lastName">اللقب</label>
+                  <input type="text" id="lastName" name="last_name" required />
+                </div>
+                <div class="form-group">
+                  <label for="gender">الجنس</label>
+                  <select id="gender" name="gender" required>
+                    <option value="">اختر الجنس</option>
+                    <option value="ذكر">ذكر</option>
+                    <option value="أنثى">أنثى</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="birthDate">تاريخ الازدياد</label>
+                  <input
+                    type="date"
+                    id="birthDate"
+                    name="birth_date"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="birthPlace">مكان الازدياد</label>
+                  <input type="text" id="birthPlace" name="birth_place" />
+                </div>
+              </div>
+
+              <!-- Birth Certificate Information -->
+              <div class="form-section">
+                <h3>معلومات عقد الميلاد</h3>
+                <div class="form-group">
+                  <label for="birthByJudgment">مولود بحكم</label>
+                  <input
+                    type="text"
+                    id="birthByJudgment"
+                    name="birth_by_judgment"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="birthCertificate">عقد الميلاد</label>
+                  <input
+                    type="text"
+                    id="birthCertificate"
+                    name="birth_certificate"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="birthRecordYear"
+                    >سنة التسجيل في سجل الولادات</label
+                  >
+                  <input
+                    type="text"
+                    id="birthRecordYear"
+                    name="birth_record_year"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="birthCertificateNumber">رقم عقد الميلاد</label>
+                  <input
+                    type="text"
+                    id="birthCertificateNumber"
+                    name="birth_certificate_number"
+                  />
+                </div>
+              </div>
+
+              <!-- Registration Information -->
+              <div class="form-section">
+                <h3>معلومات التسجيل</h3>
+                <div class="form-group">
+                  <label for="registrationNumber">رقم القيد</label>
+                  <input
+                    type="text"
+                    id="registrationNumber"
+                    name="registration_number"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="registrationDate">تاريخ التسجيل بالمدرسة</label>
+                  <input
+                    type="date"
+                    id="registrationDate"
+                    name="registration_date"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="educationLevel">السنة (المستوى التعليمي)</label>
+                  <select id="educationLevel" name="education_level_id">
+                    <option value="">اختر المستوى التعليمي</option>
+                    <!-- Education levels will be loaded dynamically -->
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="specialty">الشعبة (التخصص)</label>
+                  <select id="specialty" name="specialty_id">
+                    <option value="">اختر التخصص</option>
+                    <!-- Specialties will be loaded dynamically -->
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="section">القسم</label>
+                  <select id="section" name="section_id">
+                    <option value="">اختر القسم</option>
+                    <!-- Sections will be loaded dynamically -->
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="educationSystem">نظام التمدرس</label>
+                  <select id="educationSystem" name="education_system_id">
+                    <option value="">اختر نظام التمدرس</option>
+                    <!-- Education systems will be loaded dynamically -->
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" id="cancelModalBtn">
+                إلغاء
+              </button>
+              <button type="submit" class="btn-primary">حفظ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Export Button -->
+    <button
+      id="exportExcelBtn"
+      class="btn-primary export-btn"
+      title="تصدير البيانات"
+    >
+      <i class="fas fa-file-export"></i>
+    </button>
+
+    <!-- Custom Scripts -->
+    <script src="../js/students.js"></script>
+  </body>
+</html>

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>إدارة الحضور - نظام الحضور المدرسي</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/attendance.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- Global Database Module -->
+    <script src="../js/database.js"></script>
+    <!-- Database Connector -->
+    <script src="../js/db-connector.js"></script>
+  </head>
+  <body>
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <div class="container">
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="logo">
+          <h2>إدارة المدرسة</h2>
+          <button
+            id="themeToggle"
+            class="theme-toggle"
+            title="تبديل الوضع المظلم"
+          >
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+        <ul class="nav-links">
+          <li>
+            <a href="../index.html"><i class="fas fa-home"></i> لوحة التحكم</a>
+          </li>
+          <li>
+            <a href="students.html"
+              ><i class="fas fa-user-graduate"></i> الطلاب</a
+            >
+          </li>
+          <li>
+            <a href="teachers.html"
+              ><i class="fas fa-chalkboard-teacher"></i> المعلمون</a
+            >
+          </li>
+          <li>
+            <a href="classes.html"><i class="fas fa-school"></i> الفصول</a>
+          </li>
+          <li class="active">
+            <a href="attendance.html"
+              ><i class="fas fa-calendar-check"></i> الحضور</a
+            >
+          </li>
+          <li>
+            <a href="reports.html"><i class="fas fa-chart-bar"></i> التقارير</a>
+          </li>
+          <li>
+            <a href="settings.html"><i class="fas fa-cog"></i> الإعدادات</a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header>
+          <div class="header-content">
+            <h1>إدارة الحضور</h1>
+            <div class="user-info">
+              <span class="user-name">المدير</span>
+              <i class="fas fa-user-circle"></i>
+            </div>
+          </div>
+        </header>
+
+        <div class="dashboard-content">
+          <!-- Stats Cards -->
+          <div class="stats-container">
+            <div class="stat-card">
+              <i class="fas fa-calendar-day"></i>
+              <div class="stat-info">
+                <h3>اليوم</h3>
+                <p id="currentDate">--/--/----</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-user-check"></i>
+              <div class="stat-info">
+                <h3>الحضور اليوم</h3>
+                <p id="todayAttendance">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-user-times"></i>
+              <div class="stat-info">
+                <h3>الغياب اليوم</h3>
+                <p id="todayAbsence">0</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance Form -->
+          <div class="content-card">
+            <div class="card-header">
+              <h2>تسجيل الحضور</h2>
+              <div class="attendance-nav">
+                <button
+                  id="prevDayBtn"
+                  class="btn-secondary"
+                  title="اليوم السابق"
+                >
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+                <div class="current-day-display">
+                  <span id="displayDate">اليوم: --/--/----</span>
+                </div>
+                <button
+                  id="nextDayBtn"
+                  class="btn-secondary"
+                  title="اليوم التالي"
+                >
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <button id="todayBtn" class="btn-primary">
+                  <i class="fas fa-calendar-day"></i> اليوم
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="filter-box">
+                <div class="search-container">
+                  <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="البحث عن طالب..."
+                    class="search-input"
+                  />
+                  <i class="fas fa-search search-icon"></i>
+                </div>
+                <div class="filter-container">
+                  <select
+                    id="classFilter"
+                    class="filter-select"
+                    title="تصفية حسب الفصل"
+                  >
+                    <option value="">جميع الفصول</option>
+                  </select>
+                  <select
+                    id="statusFilter"
+                    class="filter-select"
+                    title="تصفية حسب الحالة"
+                  >
+                    <option value="">جميع الحالات</option>
+                    <option value="present">حاضر</option>
+                    <option value="absent">غائب</option>
+                    <option value="late">متأخر</option>
+                    <option value="excused">معذور</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Quick Actions -->
+              <div class="quick-actions">
+                <button id="markAllPresentBtn" class="btn-success">
+                  <i class="fas fa-check-circle"></i> تحديد الكل كحاضرين
+                </button>
+                <button id="markAllAbsentBtn" class="btn-danger">
+                  <i class="fas fa-times-circle"></i> تحديد الكل كغائبين
+                </button>
+                <button id="clearAllBtn" class="btn-secondary">
+                  <i class="fas fa-eraser"></i> مسح الكل
+                </button>
+              </div>
+
+              <!-- Attendance Table -->
+              <div class="table-container">
+                <table id="attendanceTable" class="data-table">
+                  <thead>
+                    <tr>
+                      <th>رقم التعريف</th>
+                      <th>اسم الطالب</th>
+                      <th>الفصل</th>
+                      <th>الحالة</th>
+                      <th>وقت الحضور</th>
+                      <th>ملاحظات</th>
+                      <th>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="attendanceTableBody">
+                    <!-- Data will be loaded here dynamically -->
+                  </tbody>
+                </table>
+              </div>
+
+              <div
+                class="table-empty-state"
+                id="emptyState"
+                style="display: none"
+              >
+                <i class="fas fa-calendar-times"></i>
+                <h3>لا يوجد طلاب</h3>
+                <p>
+                  لا يوجد طلاب مسجلين في هذا الفصل أو لا يوجد بيانات متطابقة مع
+                  البحث
+                </p>
+              </div>
+
+              <!-- Save Button -->
+              <div class="save-actions">
+                <button id="saveAttendanceBtn" class="btn-primary">
+                  <i class="fas fa-save"></i> حفظ بيانات الحضور
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance History -->
+          <div class="content-card">
+            <div class="card-header">
+              <h2>سجل الحضور</h2>
+              <div class="history-filters">
+                <input
+                  type="date"
+                  id="startDateFilter"
+                  class="date-input"
+                  title="تاريخ البداية"
+                />
+                <span class="date-separator">إلى</span>
+                <input
+                  type="date"
+                  id="endDateFilter"
+                  class="date-input"
+                  title="تاريخ النهاية"
+                />
+                <select
+                  id="historyClassFilter"
+                  class="filter-select"
+                  title="الفصل"
+                >
+                  <option value="">جميع الفصول</option>
+                </select>
+                <button id="applyFilterBtn" class="btn-primary">
+                  <i class="fas fa-filter"></i> تطبيق
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="history-stats">
+                <div class="history-stat-item">
+                  <span class="stat-label">عدد الأيام:</span>
+                  <span id="historyDaysCount" class="stat-value">0</span>
+                </div>
+                <div class="history-stat-item">
+                  <span class="stat-label">متوسط الحضور:</span>
+                  <span id="historyAvgAttendance" class="stat-value">0%</span>
+                </div>
+              </div>
+              <div class="history-chart-container">
+                <canvas id="attendanceChart"></canvas>
+              </div>
+              <div class="table-container history-table-container">
+                <table id="historyTable" class="data-table">
+                  <thead>
+                    <tr>
+                      <th>التاريخ</th>
+                      <th>الفصل</th>
+                      <th>عدد الطلاب</th>
+                      <th>الحضور</th>
+                      <th>الغياب</th>
+                      <th>النسبة المئوية</th>
+                      <th>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historyTableBody">
+                    <!-- History data will be loaded here dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Note Modal -->
+    <div id="noteModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="noteModalTitle">إضافة ملاحظة</h2>
+          <button class="close-btn" title="إغلاق">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="noteForm">
+            <input type="hidden" id="noteStudentId" />
+            <div class="form-group">
+              <label for="noteContent">الملاحظة</label>
+              <textarea
+                id="noteContent"
+                name="noteContent"
+                rows="4"
+                placeholder="أدخل ملاحظة حول حضور أو غياب الطالب..."
+              ></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" id="cancelNoteBtn">
+                إلغاء
+              </button>
+              <button type="submit" class="btn-primary">حفظ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Details Modal -->
+    <div id="detailsModal" class="modal">
+      <div class="modal-content modal-lg">
+        <div class="modal-header">
+          <h2 id="detailsModalTitle">تفاصيل الحضور</h2>
+          <button class="close-btn" title="إغلاق">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="details-header">
+            <div class="details-info">
+              <div class="details-item">
+                <span class="details-label">التاريخ:</span>
+                <span id="detailsDate" class="details-value">--/--/----</span>
+              </div>
+              <div class="details-item">
+                <span class="details-label">الفصل:</span>
+                <span id="detailsClass" class="details-value"></span>
+              </div>
+            </div>
+            <div class="details-stats">
+              <div class="details-stat">
+                <span class="stat-circle present-circle">0</span>
+                <span class="stat-label">حاضر</span>
+              </div>
+              <div class="details-stat">
+                <span class="stat-circle absent-circle">0</span>
+                <span class="stat-label">غائب</span>
+              </div>
+              <div class="details-stat">
+                <span class="stat-circle late-circle">0</span>
+                <span class="stat-label">متأخر</span>
+              </div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table id="detailsTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>رقم التعريف</th>
+                  <th>اسم الطالب</th>
+                  <th>الحالة</th>
+                  <th>وقت الحضور</th>
+                  <th>ملاحظات</th>
+                </tr>
+              </thead>
+              <tbody id="detailsTableBody">
+                <!-- Details data will be loaded here dynamically -->
+              </tbody>
+            </table>
+          </div>
+          <div class="form-actions details-actions">
+            <button type="button" class="btn-secondary" id="closeDetailsBtn">
+              إغلاق
+            </button>
+            <button type="button" class="btn-primary" id="printDetailsBtn">
+              <i class="fas fa-print"></i> طباعة
+            </button>
+            <button type="button" class="btn-danger" id="deleteAttendanceBtn">
+              <i class="fas fa-trash-alt"></i> حذف السجل
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+      <div class="modal-content confirmation-modal">
+        <div class="modal-header">
+          <h2>تأكيد الحذف</h2>
+          <button class="close-btn" title="إغلاق">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="confirmMessage">
+            هل أنت متأكد من حذف هذا السجل؟ هذا الإجراء لا يمكن التراجع عنه.
+          </p>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" id="cancelConfirmBtn">
+              إلغاء
+            </button>
+            <button type="button" class="btn-danger" id="confirmDeleteBtn">
+              <i class="fas fa-trash-alt"></i> حذف
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Button -->
+    <button
+      id="exportExcelBtn"
+      class="btn-primary export-btn"
+      title="تصدير بيانات الحضور"
+    >
+      <i class="fas fa-file-export"></i>
+    </button>
+
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Scripts -->
+    <script src="../js/attendance.js"></script>
+  </body>
+</html>

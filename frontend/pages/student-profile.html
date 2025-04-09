@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ملف الطالب - نظام الحضور المدرسي</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/students.css" />
+    <link rel="stylesheet" href="../css/student-profile.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- Global Database Module -->
+    <script src="../js/database.js"></script>
+    <!-- Database Connector -->
+    <script src="../js/db-connector.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="logo">
+          <h2>إدارة المدرسة</h2>
+          <button
+            id="themeToggle"
+            class="theme-toggle"
+            title="تبديل الوضع المظلم"
+          >
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+        <ul class="nav-links">
+          <li>
+            <a href="../index.html"><i class="fas fa-home"></i> لوحة التحكم</a>
+          </li>
+          <li class="active">
+            <a href="students.html"
+              ><i class="fas fa-user-graduate"></i> الطلاب</a
+            >
+          </li>
+          <li>
+            <a href="teachers.html"
+              ><i class="fas fa-chalkboard-teacher"></i> المعلمون</a
+            >
+          </li>
+          <li>
+            <a href="classes.html"><i class="fas fa-school"></i> الفصول</a>
+          </li>
+          <li>
+            <a href="attendance.html"
+              ><i class="fas fa-calendar-check"></i> الحضور</a
+            >
+          </li>
+          <li>
+            <a href="reports.html"><i class="fas fa-chart-bar"></i> التقارير</a>
+          </li>
+          <li>
+            <a href="settings.html"><i class="fas fa-cog"></i> الإعدادات</a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <header>
+          <div class="header-content">
+            <h1>
+              <a href="students.html" class="back-link">
+                <i class="fas fa-arrow-right"></i>
+              </a>
+              ملف الطالب
+            </h1>
+            <div class="user-info">
+              <span class="user-name">المدير</span>
+              <i class="fas fa-user-circle"></i>
+            </div>
+          </div>
+        </header>
+
+        <div class="dashboard-content">
+          <!-- Student Profile Header -->
+          <div class="profile-header-card">
+            <div class="profile-header">
+              <div class="profile-avatar">
+                <i class="fas fa-user-graduate"></i>
+              </div>
+              <div class="profile-info">
+                <h2 id="studentFullName">اسم الطالب الكامل</h2>
+                <div class="student-basic-info">
+                  <div class="info-item">
+                    <span class="info-label">
+                      <i class="fas fa-id-card"></i> رقم التعريف:
+                    </span>
+                    <span id="studentId" class="info-value">12345</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">
+                      <i class="fas fa-school"></i> الفصل:
+                    </span>
+                    <span id="studentClass" class="info-value"
+                      >السنة الثانية - علوم - أ</span
+                    >
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">
+                      <i class="fas fa-calendar-alt"></i> تاريخ الميلاد:
+                    </span>
+                    <span id="studentBirthDate" class="info-value"
+                      >01/01/2005</span
+                    >
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">
+                      <i class="fas fa-venus-mars"></i> الجنس:
+                    </span>
+                    <span id="studentGender" class="info-value">ذكر</span>
+                  </div>
+                </div>
+                <div class="profile-actions">
+                  <button id="editStudentBtn" class="btn-primary">
+                    <i class="fas fa-edit"></i> تعديل البيانات
+                  </button>
+                  <button id="printProfileBtn" class="btn-secondary">
+                    <i class="fas fa-print"></i> طباعة البيانات
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance and Performance -->
+          <div class="stats-container profile-stats">
+            <div class="stat-card">
+              <i class="fas fa-check-circle"></i>
+              <div class="stat-info">
+                <h3>نسبة الحضور</h3>
+                <p id="attendanceRate">95%</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-times-circle"></i>
+              <div class="stat-info">
+                <h3>أيام الغياب</h3>
+                <p id="absenceDays">3</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-calendar-week"></i>
+              <div class="stat-info">
+                <h3>مجموع الأيام</h3>
+                <p id="totalDays">60</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabs Navigation -->
+          <div class="tabs-container">
+            <div class="tabs-nav">
+              <button class="tab-btn active" data-tab="attendance">
+                <i class="fas fa-calendar-check"></i> سجل الحضور
+              </button>
+              <button class="tab-btn" data-tab="notes">
+                <i class="fas fa-sticky-note"></i> الملاحظات
+              </button>
+              <button class="tab-btn" data-tab="contact">
+                <i class="fas fa-address-book"></i> معلومات الاتصال
+              </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+              <!-- Attendance History Tab -->
+              <div class="tab-panel active" id="attendance-tab">
+                <div class="content-card">
+                  <div class="card-header">
+                    <h3>سجل الحضور</h3>
+                    <div class="filter-group">
+                      <select
+                        id="monthFilter"
+                        class="filter-select"
+                        title="تصفية حسب الشهر"
+                      >
+                        <option value="">جميع الأشهر</option>
+                        <option value="1">يناير</option>
+                        <option value="2">فبراير</option>
+                        <option value="3">مارس</option>
+                        <option value="4">أبريل</option>
+                        <option value="5">مايو</option>
+                        <option value="6">يونيو</option>
+                        <option value="7">يوليو</option>
+                        <option value="8">أغسطس</option>
+                        <option value="9">سبتمبر</option>
+                        <option value="10">أكتوبر</option>
+                        <option value="11">نوفمبر</option>
+                        <option value="12">ديسمبر</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div class="table-wrapper">
+                      <table class="data-table" id="attendanceTable">
+                        <thead>
+                          <tr>
+                            <th>التاريخ</th>
+                            <th>اليوم</th>
+                            <th>الحالة</th>
+                            <th>الوقت</th>
+                            <th>ملاحظات</th>
+                          </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody">
+                          <!-- Attendance records will be loaded here -->
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notes Tab -->
+              <div class="tab-panel" id="notes-tab">
+                <div class="content-card">
+                  <div class="card-header">
+                    <h3>ملاحظات المعلمين</h3>
+                    <button id="addNoteBtn" class="btn-primary">
+                      <i class="fas fa-plus"></i> إضافة ملاحظة
+                    </button>
+                  </div>
+                  <div class="card-body">
+                    <div class="notes-container" id="notesContainer">
+                      <!-- Notes will be loaded here -->
+                      <div class="empty-notes">
+                        <i class="fas fa-sticky-note"></i>
+                        <p>لا توجد ملاحظات حتى الآن</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contact Info Tab -->
+              <div class="tab-panel" id="contact-tab">
+                <div class="content-card">
+                  <div class="card-header">
+                    <h3>معلومات الاتصال</h3>
+                    <button id="editContactBtn" class="btn-primary">
+                      <i class="fas fa-edit"></i> تعديل
+                    </button>
+                  </div>
+                  <div class="card-body">
+                    <div class="contact-info-container">
+                      <div class="contact-section">
+                        <h4>معلومات الطالب</h4>
+                        <div class="contact-grid">
+                          <div class="contact-item">
+                            <span class="contact-label">العنوان:</span>
+                            <span id="studentAddress" class="contact-value"
+                              >حي السلام، شارع 15</span
+                            >
+                          </div>
+                          <div class="contact-item">
+                            <span class="contact-label">رقم الهاتف:</span>
+                            <span id="studentPhone" class="contact-value"
+                              >0123456789</span
+                            >
+                          </div>
+                          <div class="contact-item">
+                            <span class="contact-label"
+                              >البريد الإلكتروني:</span
+                            >
+                            <span id="studentEmail" class="contact-value"
+                              >student@example.com</span
+                            >
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="contact-section">
+                        <h4>معلومات ولي الأمر</h4>
+                        <div class="contact-grid">
+                          <div class="contact-item">
+                            <span class="contact-label">اسم ولي الأمر:</span>
+                            <span id="parentName" class="contact-value"
+                              >محمد أحمد</span
+                            >
+                          </div>
+                          <div class="contact-item">
+                            <span class="contact-label">صلة القرابة:</span>
+                            <span id="parentRelation" class="contact-value"
+                              >الأب</span
+                            >
+                          </div>
+                          <div class="contact-item">
+                            <span class="contact-label">رقم الهاتف:</span>
+                            <span id="parentPhone" class="contact-value"
+                              >0987654321</span
+                            >
+                          </div>
+                          <div class="contact-item">
+                            <span class="contact-label"
+                              >البريد الإلكتروني:</span
+                            >
+                            <span id="parentEmail" class="contact-value"
+                              >parent@example.com</span
+                            >
+                          </div>
+                          <div class="contact-item">
+                            <span class="contact-label">العنوان:</span>
+                            <span id="parentAddress" class="contact-value"
+                              >حي السلام، شارع 15</span
+                            >
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Add Note Modal -->
+    <div id="noteModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="noteModalTitle">إضافة ملاحظة جديدة</h2>
+          <button class="close-btn" title="إغلاق">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="noteForm">
+            <div class="form-group">
+              <label for="noteDate">التاريخ</label>
+              <input type="date" id="noteDate" name="noteDate" required />
+            </div>
+            <div class="form-group">
+              <label for="noteType">نوع الملاحظة</label>
+              <select id="noteType" name="noteType" required>
+                <option value="">اختر النوع</option>
+                <option value="academic">أكاديمية</option>
+                <option value="behavior">سلوكية</option>
+                <option value="achievement">إنجاز</option>
+                <option value="other">أخرى</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="noteContent">الملاحظة</label>
+              <textarea
+                id="noteContent"
+                name="noteContent"
+                rows="4"
+                required
+                placeholder="اكتب الملاحظة هنا..."
+              ></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" id="cancelNoteBtn">
+                إلغاء
+              </button>
+              <button type="submit" class="btn-primary">حفظ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Contact Modal -->
+    <div id="contactModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="contactModalTitle">تعديل معلومات الاتصال</h2>
+          <button class="close-btn" title="إغلاق">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="contactForm">
+            <h3>معلومات الطالب</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editStudentAddress">العنوان</label>
+                <input
+                  type="text"
+                  id="editStudentAddress"
+                  name="studentAddress"
+                />
+              </div>
+              <div class="form-group">
+                <label for="editStudentPhone">رقم الهاتف</label>
+                <input type="tel" id="editStudentPhone" name="studentPhone" />
+              </div>
+              <div class="form-group">
+                <label for="editStudentEmail">البريد الإلكتروني</label>
+                <input type="email" id="editStudentEmail" name="studentEmail" />
+              </div>
+            </div>
+            <h3>معلومات ولي الأمر</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editParentName">اسم ولي الأمر</label>
+                <input type="text" id="editParentName" name="parentName" />
+              </div>
+              <div class="form-group">
+                <label for="editParentRelation">صلة القرابة</label>
+                <select id="editParentRelation" name="parentRelation">
+                  <option value="الأب">الأب</option>
+                  <option value="الأم">الأم</option>
+                  <option value="الأخ">الأخ</option>
+                  <option value="الأخت">الأخت</option>
+                  <option value="أخرى">أخرى</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="editParentPhone">رقم الهاتف</label>
+                <input type="tel" id="editParentPhone" name="parentPhone" />
+              </div>
+              <div class="form-group">
+                <label for="editParentEmail">البريد الإلكتروني</label>
+                <input type="email" id="editParentEmail" name="parentEmail" />
+              </div>
+              <div class="form-group">
+                <label for="editParentAddress">العنوان</label>
+                <input
+                  type="text"
+                  id="editParentAddress"
+                  name="parentAddress"
+                />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" id="cancelContactBtn">
+                إلغاء
+              </button>
+              <button type="submit" class="btn-primary">حفظ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Custom Scripts -->
+    <script src="../js/student-profile.js"></script>
+  </body>
+</html>
