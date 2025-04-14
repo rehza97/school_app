@@ -1,31 +1,41 @@
 class Teacher {
-  final String id;
-  final String name;
-  final String subject;
-  final String accessCode;
+  final String teacherId;
+  final String firstName;
+  final String lastName;
+  final String email;
+  final String phoneNumber;
+  final String? profileImageUrl;
 
   Teacher({
-    required this.id,
-    required this.name,
-    required this.subject,
-    required this.accessCode,
+    required this.teacherId,
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+    required this.phoneNumber,
+    this.profileImageUrl,
   });
 
-  factory Teacher.fromJson(Map<String, dynamic> json) {
+  factory Teacher.fromMap(Map<String, dynamic> map) {
     return Teacher(
-      id: json['id'],
-      name: json['name'],
-      subject: json['subject'],
-      accessCode: json['accessCode'],
+      teacherId: map['teacherId'] ?? '',
+      firstName: map['firstName'] ?? '',
+      lastName: map['lastName'] ?? '',
+      email: map['email'] ?? '',
+      phoneNumber: map['phoneNumber'] ?? '',
+      profileImageUrl: map['profileImageUrl'],
     );
   }
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'name': name,
-      'subject': subject,
-      'accessCode': accessCode,
+      'teacherId': teacherId,
+      'firstName': firstName,
+      'lastName': lastName,
+      'email': email,
+      'phoneNumber': phoneNumber,
+      'profileImageUrl': profileImageUrl,
     };
   }
+
+  String get fullName => '$firstName $lastName';
 }

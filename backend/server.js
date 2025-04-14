@@ -37,6 +37,54 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+// Get all education levels
+app.get("/api/education-levels", (req, res) => {
+  const query = "SELECT * FROM education_level WHERE active = 1";
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error("Error retrieving education levels:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+    res.json(rows);
+  });
+});
+
+// Get all education systems
+app.get("/api/education-systems", (req, res) => {
+  const query = "SELECT * FROM education_system WHERE active = 1";
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error("Error retrieving education systems:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+    res.json(rows);
+  });
+});
+
+// Get all specialties
+app.get("/api/specialties", (req, res) => {
+  const query = "SELECT * FROM specialty WHERE active = 1";
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error("Error retrieving specialties:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+    res.json(rows);
+  });
+});
+
+// Get all sections
+app.get("/api/sections", (req, res) => {
+  const query = "SELECT * FROM sections WHERE active = 1";
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error("Error retrieving sections:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+    res.json(rows);
+  });
+});
+
 // Configure multer for file uploads with increased size limit
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -328,7 +376,7 @@ app.put("/api/students/:id", (req, res) => {
     active,
   } = req.body;
 
-  db.run(
+      db.run(
     `UPDATE students SET 
       registration_id = ?, 
       last_name = ?, 
@@ -368,7 +416,7 @@ app.put("/api/students/:id", (req, res) => {
       active ? 1 : 0,
       req.params.id,
     ],
-    function (err) {
+        function (err) {
       if (err) {
         console.error("Error updating student:", err);
         return res.status(500).json({ error: "Failed to update student" });
@@ -381,7 +429,7 @@ app.put("/api/students/:id", (req, res) => {
   );
 });
 
-// Teacher routes
+  // Teacher routes
 app.get("/api/teachers", (req, res) => {
   console.log("GET /api/teachers called");
 
@@ -407,28 +455,28 @@ app.get("/api/teachers", (req, res) => {
       console.log("Sample teacher data:", rows[0]);
     }
 
-    res.json(rows);
-  });
+        res.json(rows);
+      });
 });
 
 app.post("/api/teachers", (req, res) => {
-  const { first_name, last_name, subject, birth_date, position } = req.body;
-  db.run(
-    "INSERT INTO teachers (first_name, last_name, subject, birth_date, position) VALUES (?, ?, ?, ?, ?)",
-    [first_name, last_name, subject, birth_date, position],
-    function (err) {
+      const { first_name, last_name, subject, birth_date, position } = req.body;
+      db.run(
+        "INSERT INTO teachers (first_name, last_name, subject, birth_date, position) VALUES (?, ?, ?, ?, ?)",
+        [first_name, last_name, subject, birth_date, position],
+        function (err) {
       if (err) {
         console.error("Error creating teacher:", err);
         return res.status(500).json({ error: "Internal server error" });
       }
-      res.status(201).json({ id: this.lastID });
-    }
-  );
+          res.status(201).json({ id: this.lastID });
+        }
+      );
 });
 
-// Section routes
+  // Section routes
 app.get("/api/sections", (req, res) => {
-  db.all("SELECT * FROM sections WHERE active = 1", [], (err, rows) => {
+      db.all("SELECT * FROM sections WHERE active = 1", [], (err, rows) => {
     if (err) {
       console.error("Error fetching sections:", err);
       return res.status(500).json({ error: "Internal server error" });
@@ -438,119 +486,119 @@ app.get("/api/sections", (req, res) => {
 });
 
 app.post("/api/sections", (req, res) => {
-  const { name, capacity, teacher_id } = req.body;
-  db.run(
-    "INSERT INTO sections (name, capacity, teacher_id) VALUES (?, ?, ?)",
-    [name, capacity, teacher_id],
-    function (err) {
+      const { name, capacity, teacher_id } = req.body;
+      db.run(
+        "INSERT INTO sections (name, capacity, teacher_id) VALUES (?, ?, ?)",
+        [name, capacity, teacher_id],
+        function (err) {
       if (err) {
         console.error("Error creating section:", err);
         return res.status(500).json({ error: "Internal server error" });
       }
-      res.status(201).json({ id: this.lastID });
-    }
-  );
+          res.status(201).json({ id: this.lastID });
+        }
+      );
 });
 
-// File upload route
+  // File upload route
 app.post("/api/upload", upload.single("file"), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
+      try {
+        if (!req.file) {
+          return res.status(400).json({ error: "No file uploaded" });
+        }
 
-    const { type } = req.body;
-    if (!type || !["student", "teacher"].includes(type)) {
-      return res.status(400).json({ error: "Invalid file type specified" });
-    }
+        const { type } = req.body;
+        if (!type || !["student", "teacher"].includes(type)) {
+          return res.status(400).json({ error: "Invalid file type specified" });
+        }
 
-    // Process the Excel file
-    const workbook = xlsx.readFile(req.file.path);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
+        // Process the Excel file
+        const workbook = xlsx.readFile(req.file.path);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
 
-    // Convert to array of arrays first
-    const rawData = xlsx.utils.sheet_to_json(worksheet, {
-      header: 1,
-      raw: false,
-      defval: "",
-    });
+        // Convert to array of arrays first
+        const rawData = xlsx.utils.sheet_to_json(worksheet, {
+          header: 1,
+          raw: false,
+          defval: "",
+        });
 
-    // Remove empty rows and get headers and data
-    const nonEmptyRows = rawData.filter((row) =>
-      row.some((cell) => cell !== "")
-    );
-    if (nonEmptyRows.length < 2) {
-      // Need at least headers and one data row
+        // Remove empty rows and get headers and data
+        const nonEmptyRows = rawData.filter((row) =>
+          row.some((cell) => cell !== "")
+        );
+        if (nonEmptyRows.length < 2) {
+          // Need at least headers and one data row
       return res.status(400).json({ error: "لا توجد بيانات صالحة في الملف" });
-    }
+        }
 
-    const rows = nonEmptyRows.slice(1); // Skip header row
+        const rows = nonEmptyRows.slice(1); // Skip header row
 
-    // Begin transaction
+        // Begin transaction
     db.run("BEGIN TRANSACTION", async (err) => {
       if (err) {
         console.error("Transaction error:", err);
         return res.status(500).json({ error: "Database error" });
       }
 
-      let successCount = 0;
+          let successCount = 0;
 
       try {
-        // Process records based on type
-        if (type === "teacher") {
-          for (const row of rows) {
-            // Skip rows where essential fields are empty
-            if (!row[0] || !row[1] || !row[2]) continue;
+          // Process records based on type
+          if (type === "teacher") {
+            for (const row of rows) {
+              // Skip rows where essential fields are empty
+              if (!row[0] || !row[1] || !row[2]) continue;
 
-            db.run(
+                db.run(
               `INSERT INTO teachers (
                     registration_id, last_name, first_name, birth_date,
                     rank, subject, grade, effective_date, active
               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-              [
-                row[0]?.toString().trim(), // registration_id
-                row[1]?.toString().trim(), // last_name
-                row[2]?.toString().trim(), // first_name
-                row[3]?.toString().trim(), // birth_date
-                row[4]?.toString().trim(), // rank
-                row[5]?.toString().trim(), // subject
-                row[6]?.toString().trim() || "0", // grade
-                row[7]?.toString().trim() || null, // effective_date
-              ],
-              (err) => {
+                  [
+                    row[0]?.toString().trim(), // registration_id
+                    row[1]?.toString().trim(), // last_name
+                    row[2]?.toString().trim(), // first_name
+                    row[3]?.toString().trim(), // birth_date
+                    row[4]?.toString().trim(), // rank
+                    row[5]?.toString().trim(), // subject
+                    row[6]?.toString().trim() || "0", // grade
+                    row[7]?.toString().trim() || null, // effective_date
+                  ],
+                  (err) => {
                 if (!err) successCount++;
               }
             );
-          }
-        } else {
-          // Handle student data
-          for (const row of rows) {
-            // Skip rows where essential fields are empty
-            if (!row[0] || !row[1] || !row[2]) continue;
+            }
+          } else {
+            // Handle student data
+            for (const row of rows) {
+              // Skip rows where essential fields are empty
+              if (!row[0] || !row[1] || !row[2]) continue;
 
-            db.run(
+                db.run(
               `INSERT INTO students (
                     registration_id, last_name, first_name, gender,
                     birth_date, section, year, registration_place,
                     contract_number, birth_certificate, teaching_system,
                     division, active
               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-              [
-                row[0]?.toString().trim(), // رقم التعريف
-                row[1]?.toString().trim(), // اللقب
-                row[2]?.toString().trim(), // الاسم
-                row[3]?.toString().trim(), // الجنس
-                row[4]?.toString().trim(), // تاريخ الازدياد
-                row[5]?.toString().trim(), // القسم
-                row[6]?.toString().trim(), // السنة
-                row[7]?.toString().trim(), // مكان الازدياد
-                row[8]?.toString().trim(), // رقم عقد الميلاد
-                row[9]?.toString().trim(), // عقد الميلاد
-                row[10]?.toString().trim(), // نظام التدريس
-                row[11]?.toString().trim(), // الشعبة
-              ],
-              (err) => {
+                  [
+                    row[0]?.toString().trim(), // رقم التعريف
+                    row[1]?.toString().trim(), // اللقب
+                    row[2]?.toString().trim(), // الاسم
+                    row[3]?.toString().trim(), // الجنس
+                    row[4]?.toString().trim(), // تاريخ الازدياد
+                    row[5]?.toString().trim(), // القسم
+                    row[6]?.toString().trim(), // السنة
+                    row[7]?.toString().trim(), // مكان الازدياد
+                    row[8]?.toString().trim(), // رقم عقد الميلاد
+                    row[9]?.toString().trim(), // عقد الميلاد
+                    row[10]?.toString().trim(), // نظام التدريس
+                    row[11]?.toString().trim(), // الشعبة
+                  ],
+                  (err) => {
                 if (!err) successCount++;
               }
             );
@@ -579,17 +627,17 @@ app.post("/api/upload", upload.single("file"), (req, res) => {
             message: "تم معالجة الملف بنجاح",
             recordsProcessed: successCount,
           });
-        });
-      } catch (error) {
-        // Rollback transaction on error
+          });
+        } catch (error) {
+          // Rollback transaction on error
         db.run("ROLLBACK", () => {
           console.error("Processing error:", error);
           res.status(500).json({ error: "Error processing file" });
-        });
-      }
+          });
+        }
     });
-  } catch (error) {
-    console.error("Upload error:", error);
+      } catch (error) {
+        console.error("Upload error:", error);
     res.status(500).json({ error: error.message || "Server error" });
   }
 });
@@ -830,7 +878,7 @@ app.post("/api/students/import", (req, res) => {
       return excelDate;
     };
 
-    // Process each student
+      // Process each student
     const processStudents = (referenceData) => {
       console.log(
         `Starting to process ${students.length} students with reference data`
@@ -939,11 +987,11 @@ app.post("/api/students/import", (req, res) => {
                 student["نظام التدريس"],
             });
 
-            // Check if student already exists
-            db.get(
+        // Check if student already exists
+          db.get(
               "SELECT id FROM students WHERE registration_id = ?",
               [registrationId],
-              (err, row) => {
+            (err, row) => {
                 if (err) {
                   console.error(
                     `Error checking student existence for ID ${registrationId}:`,
@@ -955,9 +1003,9 @@ app.post("/api/students/import", (req, res) => {
                 }
 
                 if (row) {
-                  // Update existing student
-                  db.run(
-                    `UPDATE students SET 
+          // Update existing student
+            db.run(
+              `UPDATE students SET 
                 last_name = ?, 
                 first_name = ?, 
                 gender = ?, 
@@ -975,7 +1023,7 @@ app.post("/api/students/import", (req, res) => {
                     education_system_id = ?,
                 active = 1 
               WHERE registration_id = ?`,
-                    [
+              [
                       student.last_name,
                       student.first_name,
                       student.gender,
@@ -994,27 +1042,27 @@ app.post("/api/students/import", (req, res) => {
                       registrationId,
                     ],
                     function (err) {
-                      if (err) {
+                if (err) {
                         console.error(
                           `Error updating student ${registrationId}:`,
                           err
                         );
                         errorCount++;
                         errors.push({ index, error: err.message });
-                      } else {
+                } else {
                         updateCount++;
                         console.log(
                           `Updated student ${registrationId}: ${student.first_name} ${student.last_name}`
                         );
                       }
                       processedCount++;
-                      resolve();
-                    }
-                  );
-                } else {
-                  // Insert new student
-                  db.run(
-                    `INSERT INTO students (
+                  resolve();
+              }
+            );
+        } else {
+          // Insert new student
+            db.run(
+              `INSERT INTO students (
                     registration_id, 
                     last_name, 
                     first_name, 
@@ -1052,21 +1100,21 @@ app.post("/api/students/import", (req, res) => {
                       education_system_id,
                     ],
                     function (err) {
-                      if (err) {
+                if (err) {
                         console.error(
                           `Error adding student ${registrationId}:`,
                           err
                         );
                         errorCount++;
                         errors.push({ index, error: err.message });
-                      } else {
+                } else {
                         successCount++;
                         console.log(
                           `Added student ${registrationId}: ${student.first_name} ${student.last_name}`
                         );
                       }
                       processedCount++;
-                      resolve();
+                  resolve();
                     }
                   );
                 }
@@ -1565,8 +1613,8 @@ app.post("/api/teachers/import", (req, res) => {
     .catch((err) => {
       console.error("Error during teacher import:", err);
 
-      res.status(500).json({
-        success: false,
+    res.status(500).json({
+      success: false,
         message: "Error during import process",
         error: err.message,
       });
@@ -2899,3 +2947,184 @@ const findOrCreateReferenceData = (tableName, name) => {
     });
   });
 };
+
+// Get section details including teachers and students
+app.get("/api/sections/:id", (req, res) => {
+  const sectionId = req.params.id;
+  const currentYear = new Date().getFullYear().toString();
+
+  // Get basic section info
+  db.get(
+    `SELECT 
+      s.*,
+      el.name as education_level_name,
+      sp.name as specialty_name,
+      t.first_name as supervisor_first_name,
+      t.last_name as supervisor_last_name
+    FROM sections s
+    LEFT JOIN education_level el ON s.education_level_id = el.id
+    LEFT JOIN specialty sp ON s.specialty_id = sp.id
+    LEFT JOIN teachers t ON s.teacher_id = t.id
+    WHERE s.id = ?`,
+    [sectionId],
+    (err, section) => {
+      if (err) {
+        console.error("Error retrieving section:", err);
+        return res.status(500).json({ error: "Internal server error" });
+      }
+      if (!section) {
+        return res.status(404).json({ error: "Section not found" });
+      }
+
+      // Get teachers teaching in this section
+      db.all(
+        `SELECT DISTINCT 
+          t.id, t.first_name, t.last_name,
+          s.name as subject_name,
+          cs.day_of_week, cs.start_time, cs.end_time, cs.room
+        FROM class_schedule cs
+        JOIN teachers t ON cs.teacher_id = t.id
+        JOIN subjects s ON cs.subject_id = s.id
+        WHERE cs.section_id = ? AND cs.active = 1`,
+        [sectionId],
+        (err, teachers) => {
+          if (err) {
+            console.error("Error retrieving section teachers:", err);
+            return res.status(500).json({ error: "Internal server error" });
+          }
+
+          // Get students in this section
+          db.all(
+            `SELECT 
+              s.id, s.registration_id, s.first_name, s.last_name,
+              ss.enrollment_date, ss.status
+            FROM students s
+            JOIN student_section ss ON s.id = ss.student_id
+            WHERE ss.section_id = ? AND ss.academic_year = ? AND s.active = 1`,
+            [sectionId, currentYear],
+            (err, students) => {
+              if (err) {
+                console.error("Error retrieving section students:", err);
+                return res.status(500).json({ error: "Internal server error" });
+              }
+
+              res.json({
+                ...section,
+                teachers: teachers || [],
+                students: students || [],
+              });
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
+// Get all sections with basic info including counts
+app.get("/api/sections", (req, res) => {
+  const currentYear = new Date().getFullYear().toString();
+
+  db.all(
+    `SELECT 
+      s.*,
+      el.name as education_level_name,
+      sp.name as specialty_name,
+      t.first_name as supervisor_first_name,
+      t.last_name as supervisor_last_name,
+      (
+        SELECT COUNT(DISTINCT cs.teacher_id) 
+        FROM class_schedule cs 
+        WHERE cs.section_id = s.id AND cs.active = 1
+      ) as teacher_count,
+      (
+        SELECT COUNT(DISTINCT ss.student_id) 
+        FROM student_section ss 
+        WHERE ss.section_id = s.id AND ss.academic_year = ?
+      ) as student_count
+    FROM sections s
+    LEFT JOIN education_level el ON s.education_level_id = el.id
+    LEFT JOIN specialty sp ON s.specialty_id = sp.id
+    LEFT JOIN teachers t ON s.teacher_id = t.id
+    WHERE s.active = 1
+    ORDER BY s.name`,
+    [currentYear],
+    (err, sections) => {
+      if (err) {
+        console.error("Error retrieving sections:", err);
+        return res.status(500).json({ error: "Internal server error" });
+      }
+      res.json(sections);
+    }
+  );
+});
+
+// Update section's supervisor teacher
+app.put("/api/sections/:id/supervisor", (req, res) => {
+  const { teacher_id } = req.body;
+
+  db.run(
+    "UPDATE sections SET teacher_id = ? WHERE id = ?",
+    [teacher_id, req.params.id],
+    function (err) {
+      if (err) {
+        console.error("Error updating section supervisor:", err);
+        return res.status(500).json({ error: "Failed to update supervisor" });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: "Section not found" });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+// Add teacher schedule to section
+app.post("/api/sections/:id/schedule", (req, res) => {
+  const { teacher_id, subject_id, day_of_week, start_time, end_time, room } =
+    req.body;
+
+  db.run(
+    `INSERT INTO class_schedule (
+      section_id, teacher_id, subject_id, 
+      day_of_week, start_time, end_time, room
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      req.params.id,
+      teacher_id,
+      subject_id,
+      day_of_week,
+      start_time,
+      end_time,
+      room,
+    ],
+    function (err) {
+      if (err) {
+        console.error("Error adding teacher schedule:", err);
+        return res.status(500).json({ error: "Failed to add schedule" });
+      }
+      res.status(201).json({ id: this.lastID });
+    }
+  );
+});
+
+// Add student to section
+app.post("/api/sections/:id/students", (req, res) => {
+  const { student_id } = req.body;
+  const currentYear = new Date().getFullYear().toString();
+
+  db.run(
+    `INSERT INTO student_section (
+      student_id, section_id, academic_year, 
+      enrollment_date, status
+    ) VALUES (?, ?, ?, date('now'), 'active')`,
+    [student_id, req.params.id, currentYear],
+    function (err) {
+      if (err) {
+        console.error("Error adding student to section:", err);
+        return res.status(500).json({ error: "Failed to add student" });
+      }
+      res.status(201).json({ id: this.lastID });
+    }
+  );
+});

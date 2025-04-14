@@ -72,6 +72,13 @@ let selectedSection = null;
 let deleteCallback = null;
 let isEditMode = false;
 
+// Global variables
+let currentLevelId = null;
+let currentSpecialtyId = null;
+let currentSectionId = null;
+let currentPage = 1;
+const itemsPerPage = 10;
+
 // Initialize page
 function initialize() {
   // Initialize database if needed

@@ -478,10 +478,39 @@ function readExcelFile(file) {
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
 
+      // Find the registration ID column index
+      const range = XLSX.utils.decode_range(worksheet["!ref"]);
+      let regIdColIndex = -1;
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+        const cell = worksheet[cellAddress];
+        if (cell && cell.v === "رقم التعريف") {
+          regIdColIndex = C;
+          break;
+        }
+      }
+
+      // If found, force that column to be read as text
+      if (regIdColIndex !== -1) {
+        for (let R = range.s.r + 1; R <= range.e.r; R++) {
+          const cellAddress = XLSX.utils.encode_cell({
+            r: R,
+            c: regIdColIndex,
+          });
+          if (worksheet[cellAddress]) {
+            worksheet[cellAddress].t = "s"; // Force cell type to be string
+            worksheet[cellAddress].z = "@"; // Force text format
+            // Ensure the value is stored as a string
+            worksheet[cellAddress].v = worksheet[cellAddress].v.toString();
+          }
+        }
+      }
+
       // Convert to JSON with header:1 to get full array representation
       const jsonData = XLSX.utils.sheet_to_json(worksheet, {
         header: 1,
         defval: "",
+        raw: false, // This ensures dates and numbers are parsed as strings
       });
 
       // Log the first several rows to understand structure
@@ -513,7 +542,6 @@ function readExcelFile(file) {
       }
 
       if (headerRowIndex === -1) {
-        // Default to 4th row (index 3) if we can't identify a header row
         headerRowIndex = 3;
         console.log("Could not identify header row, using default (row 4)");
       } else {
@@ -529,7 +557,7 @@ function readExcelFile(file) {
 
       // Create array of objects
       const formattedData = [];
-      rows.forEach((row) => {
+      rows.forEach((row, rowIndex) => {
         // Skip empty rows
         if (row.every((cell) => !cell)) {
           return;
@@ -538,7 +566,17 @@ function readExcelFile(file) {
         const obj = {};
         headers.forEach((header, index) => {
           if (header && index < row.length) {
-            obj[header] = row[index];
+            // Ensure registration_id is always a string
+            if (header === "رقم التعريف" && row[index]) {
+              obj[header] = row[index].toString();
+              console.log(`Row ${rowIndex + 1} registration_id:`, {
+                original: row[index],
+                converted: obj[header],
+                type: typeof obj[header],
+              });
+            } else {
+              obj[header] = row[index];
+            }
           }
         });
         formattedData.push(obj);
@@ -647,17 +685,18 @@ async function processStudentData() {
     // Prepare data for backend processing
     const processedData = [];
 
-    // Process all records without limiting to 50
+    // Process all records
     for (let i = 0; i < currentFileData.length; i++) {
       const record = currentFileData[i];
 
       // Map Arabic column names to English field names
       const processedRecord = {
-        registration_id:
+        registration_id: (
           record["رقم التعريف"] ||
           record["رقم الهوية"] ||
           record["الرقم التعريفي"] ||
-          record["معرف الطالب"],
+          record["معرف الطالب"]
+        ).toString(),
         first_name:
           record["الاسم"] || record["اسم الطالب"] || record["الاسم الاول"],
         last_name:
@@ -688,9 +727,14 @@ async function processStudentData() {
           record["نظام التمدرس"] || record["نظام التدريس"] || record["النظام"],
       };
 
+      // Debug log for registration ID
       console.log(
-        `Record ${i + 1}/${currentFileData.length}:`,
-        processedRecord
+        `Record ${i + 1}/${currentFileData.length} registration_id:`,
+        {
+          value: processedRecord.registration_id,
+          type: typeof processedRecord.registration_id,
+          length: processedRecord.registration_id.length,
+        }
       );
 
       // Check if record has at least registration_id or name info
@@ -979,182 +1023,86 @@ function setupEventListeners() {
       }
     });
   });
+
+  // Student form submit
+  const studentForm = document.getElementById("studentForm");
+  if (studentForm) {
+    studentForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const studentId = studentForm.getAttribute("data-student-id");
+
+      if (studentId) {
+        // Update existing student
+        await updateStudent(studentId, studentForm);
+      } else {
+        // Add new student
+        await addStudent(studentForm);
+      }
+    });
+  }
 }
 
 // Update students table with current data
 function updateStudentsTable() {
-  const tableBody = document.getElementById("studentsTableBody");
-  if (!tableBody) return;
+  if (!studentsTableBody) return;
 
-  // Clear table
-  tableBody.innerHTML = "";
+  // Clear existing rows
+  studentsTableBody.innerHTML = "";
 
-  // Sort the filtered students
-  const sortedStudents = [...filteredStudents].sort((a, b) => {
-    // For numeric fields
-    if (
-      [
-        "active",
-        "education_level_id",
-        "specialty_id",
-        "section_id",
-        "education_system_id",
-      ].includes(sortField)
-    ) {
-      const valA = a[sortField] === null ? -1 : a[sortField];
-      const valB = b[sortField] === null ? -1 : b[sortField];
-      return sortDirection === "asc" ? valA - valB : valB - valA;
-    }
+  // Calculate pagination
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
 
-    // For date fields
-    if (sortField === "birth_date" || sortField === "registration_date") {
-      const dateA = a[sortField] ? new Date(a[sortField]) : new Date(0);
-      const dateB = b[sortField] ? new Date(b[sortField]) : new Date(0);
-      return sortDirection === "asc" ? dateA - dateB : dateB - dateA;
-    }
+  // Create table rows
+  paginatedStudents.forEach((student) => {
+    const row = document.createElement("tr");
 
-    // For string fields
-    const valA = a[sortField] === null ? "" : a[sortField];
-    const valB = b[sortField] === null ? "" : b[sortField];
+    // Add data cells
+    row.innerHTML = `
+      <td>${student.registration_id || ""}</td>
+      <td>${student.first_name || ""}</td>
+      <td>${student.last_name || ""}</td>
+      <td>${student.gender || ""}</td>
+      <td>${formatDate(student.birth_date) || ""}</td>
+      <td>${student.education_level_name || ""}</td>
+      <td>${student.specialty_name || ""}</td>
+      <td>${student.section_name || ""}</td>
+      <td>${student.education_system_name || ""}</td>
+      <td>
+        <span class="status-badge ${student.active ? "active" : "inactive"}">
+          ${student.active ? "نشط" : "غير نشط"}
+        </span>
+      </td>
+      <td class="actions">
+        <button onclick="viewStudent(${
+          student.id
+        })" class="btn-icon" title="عرض">
+          <i class="fas fa-eye"></i>
+        </button>
+        <button onclick="editStudent(${
+          student.id
+        })" class="btn-icon" title="تعديل">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button onclick="deleteStudent(${
+          student.id
+        })" class="btn-icon delete" title="حذف">
+          <i class="fas fa-trash"></i>
+        </button>
+        </td>
+      `;
 
-    return sortDirection === "asc"
-      ? valA.toString().localeCompare(valB.toString())
-      : valB.toString().localeCompare(valA.toString());
+    studentsTableBody.appendChild(row);
   });
 
-  // Paginate the results
-  const startIndex = (currentPage - 1) * pageSize;
-  const paginatedStudents = sortedStudents.slice(
-    startIndex,
-    startIndex + pageSize
+  // Update pagination info
+  document.getElementById("currentPage").textContent = currentPage;
+  document.getElementById("totalPages").textContent = Math.ceil(
+    filteredStudents.length / pageSize
   );
 
-  // If no students, show message
-  if (paginatedStudents.length === 0) {
-    const noDataRow = document.createElement("tr");
-    const noDataCell = document.createElement("td");
-    noDataCell.colSpan = 11; // Updated to match the number of columns
-    noDataCell.textContent = "لا توجد بيانات متاحة";
-    noDataCell.className = "no-data";
-    noDataRow.appendChild(noDataCell);
-    tableBody.appendChild(noDataRow);
-  } else {
-    // Add rows for each student
-    paginatedStudents.forEach((student) => {
-      const row = document.createElement("tr");
-      row.className = student.active == 0 ? "inactive-row" : "";
-
-      // Registration ID
-      const idCell = document.createElement("td");
-      idCell.textContent = student.registration_id || "-";
-      row.appendChild(idCell);
-
-      // First Name
-      const firstNameCell = document.createElement("td");
-      firstNameCell.textContent = student.first_name || "-";
-      row.appendChild(firstNameCell);
-
-      // Last Name
-      const lastNameCell = document.createElement("td");
-      lastNameCell.textContent = student.last_name || "-";
-      row.appendChild(lastNameCell);
-
-      // Gender
-      const genderCell = document.createElement("td");
-      genderCell.textContent = student.gender || "-";
-      row.appendChild(genderCell);
-
-      // Birth Date
-      const birthDateCell = document.createElement("td");
-      birthDateCell.textContent = student.birth_date
-        ? new Date(student.birth_date).toLocaleDateString("ar-SA")
-        : "-";
-      row.appendChild(birthDateCell);
-
-      // Education Level
-      const educationLevelCell = document.createElement("td");
-      const educationLevel = educationLevels.find(
-        (level) => level.id === student.education_level_id
-      );
-      educationLevelCell.textContent = educationLevel
-        ? educationLevel.name
-        : "-";
-      row.appendChild(educationLevelCell);
-
-      // Specialty
-      const specialtyCell = document.createElement("td");
-      const specialty = specialties.find(
-        (spec) => spec.id === student.specialty_id
-      );
-      specialtyCell.textContent = specialty ? specialty.name : "-";
-      row.appendChild(specialtyCell);
-
-      // Section
-      const sectionCell = document.createElement("td");
-      const section = sections.find((sec) => sec.id === student.section_id);
-      sectionCell.textContent = section ? section.name : "-";
-      row.appendChild(sectionCell);
-
-      // Education System
-      const educationSystemCell = document.createElement("td");
-      const educationSystem = educationSystems.find(
-        (sys) => sys.id === student.education_system_id
-      );
-      educationSystemCell.textContent = educationSystem
-        ? educationSystem.name
-        : "-";
-      row.appendChild(educationSystemCell);
-
-      // Status
-      const statusCell = document.createElement("td");
-      const statusSpan = document.createElement("span");
-      statusSpan.className = `status-badge ${
-        student.active == 1 ? "active" : "inactive"
-      }`;
-      statusSpan.textContent = student.active == 1 ? "نشط" : "غير نشط";
-      statusCell.appendChild(statusSpan);
-      row.appendChild(statusCell);
-
-      // Actions
-      const actionsCell = document.createElement("td");
-      actionsCell.className = "actions-cell";
-
-      // View Button
-      const viewBtn = document.createElement("button");
-      viewBtn.className = "action-btn view-btn";
-      viewBtn.title = "عرض بيانات الطالب";
-      viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
-      viewBtn.onclick = () => viewStudent(student.id);
-      actionsCell.appendChild(viewBtn);
-
-      // Edit Button
-      const editBtn = document.createElement("button");
-      editBtn.className = "action-btn edit-btn";
-      editBtn.title = "تعديل بيانات الطالب";
-      editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-      editBtn.onclick = () => editStudent(student.id);
-      actionsCell.appendChild(editBtn);
-
-      // Delete Button
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "action-btn delete-btn";
-      deleteBtn.title = "حذف الطالب";
-      deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-      deleteBtn.onclick = () => deleteStudent(student.id);
-      actionsCell.appendChild(deleteBtn);
-
-      row.appendChild(actionsCell);
-
-      tableBody.appendChild(row);
-    });
-  }
-
-  // Update pagination info
-  const totalPages = Math.ceil(filteredStudents.length / pageSize);
-  document.getElementById("currentPage").textContent = currentPage;
-  document.getElementById("totalPages").textContent = totalPages;
-
-  // Update pagination button states
+  // Update pagination buttons
   const prevPageBtn = document.getElementById("prevPage");
   const nextPageBtn = document.getElementById("nextPage");
 
@@ -1163,20 +1111,20 @@ function updateStudentsTable() {
   }
 
   if (nextPageBtn) {
-    nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+    nextPageBtn.disabled =
+      currentPage >= Math.ceil(filteredStudents.length / pageSize);
   }
 }
 
 // Format date for display
 function formatDate(dateString) {
   if (!dateString) return "";
-
   try {
-    // Format to local date string (without time)
     const date = new Date(dateString);
-    return date.toLocaleDateString("ar-SA");
+    return date.toLocaleDateString("ar-LY");
   } catch (error) {
-    return dateString; // Fallback to original string if error
+    console.error("Error formatting date:", error);
+    return dateString;
   }
 }
 
@@ -1226,298 +1174,261 @@ function showLoading(isLoading) {
   }
 }
 
-// Show student modal for adding new student
+// Show add student modal
 function showAddStudentModal() {
   const modal = document.getElementById("studentModal");
-  const modalTitle = document.getElementById("modalTitle");
   const form = document.getElementById("studentForm");
-
-  if (modal && modalTitle) {
-    modalTitle.textContent = "إضافة طالب جديد";
-    modal.classList.add("open");
-  }
+  const modalTitle = document.getElementById("modalTitle");
 
   // Reset form
-  if (form) {
-    form.reset();
+  form.reset();
+  form.removeAttribute("data-student-id");
 
-    // Enable all form fields
-    const inputs = form.querySelectorAll("input, select");
-    inputs.forEach((input) => {
-      input.disabled = false;
-      input.readOnly = false;
-    });
+  // Set modal title
+  modalTitle.textContent = "إضافة طالب جديد";
 
-    // Set form submit action to add student
-    form.onsubmit = async (e) => {
-      e.preventDefault();
-      await addStudent(form);
-    };
-  }
+  // Show modal
+  modal.style.display = "block";
+
+  // Setup close handlers
+  const closeBtn = modal.querySelector(".close-btn");
+  const cancelBtn = document.getElementById("cancelModalBtn");
+
+  closeBtn.onclick = () => (modal.style.display = "none");
+  cancelBtn.onclick = () => (modal.style.display = "none");
+
+  // Close on outside click
+  window.onclick = (event) => {
+    if (event.target === modal) {
+      modal.style.display = "none";
+    }
+  };
 }
 
 // View student details
-function viewStudent(id) {
-  const student = students.find((s) => s.id === id);
+async function viewStudent(id) {
+  try {
+    showLoading(true);
+    const response = await window.db.getById("/students", id);
 
-  if (!student) {
-    showNotification("لم يتم العثور على بيانات الطالب", "error");
-    return;
-  }
+    if (response.success) {
+      const student = response.data;
+      const modal = document.getElementById("studentModal");
+      const form = document.getElementById("studentForm");
+      const modalTitle = document.getElementById("modalTitle");
 
-  // Show the modal
-  const modal = document.getElementById("studentModal");
-  const modalTitle = document.getElementById("modalTitle");
-  const form = document.getElementById("studentForm");
+      // Set modal title
+      modalTitle.textContent = "عرض بيانات الطالب";
 
-  if (modal && modalTitle) {
-    modalTitle.textContent = "عرض بيانات الطالب";
-    modal.classList.add("open");
+      // Fill form fields
+      Object.keys(student).forEach((key) => {
+        const input = form.elements[key];
+        if (input) {
+          input.value = student[key];
+          input.disabled = true;
+        }
+      });
 
-    // Set form to read-only mode
-    if (form) {
-      // Fill the form with student data
-      document.getElementById("studentId").value =
-        student.registration_id || "";
-      document.getElementById("studentId").readOnly = true;
+      // Show modal
+      modal.style.display = "block";
 
-      document.getElementById("firstName").value = student.first_name || "";
-      document.getElementById("firstName").readOnly = true;
+      // Setup close handlers
+      const closeBtn = modal.querySelector(".close-btn");
+      const cancelBtn = document.getElementById("cancelModalBtn");
 
-      document.getElementById("lastName").value = student.last_name || "";
-      document.getElementById("lastName").readOnly = true;
-
-      document.getElementById("gender").value = student.gender || "";
-      document.getElementById("gender").disabled = true;
-
-      document.getElementById("birthDate").value = student.birth_date || "";
-      document.getElementById("birthDate").readOnly = true;
-
-      document.getElementById("birthPlace").value = student.birth_place || "";
-      document.getElementById("birthPlace").readOnly = true;
-
-      document.getElementById("birthByJudgment").value =
-        student.birth_by_judgment || "";
-      document.getElementById("birthByJudgment").readOnly = true;
-
-      document.getElementById("birthCertificate").value =
-        student.birth_certificate || "";
-      document.getElementById("birthCertificate").readOnly = true;
-
-      document.getElementById("birthRecordYear").value =
-        student.birth_record_year || "";
-      document.getElementById("birthRecordYear").readOnly = true;
-
-      document.getElementById("birthCertificateNumber").value =
-        student.birth_certificate_number || "";
-      document.getElementById("birthCertificateNumber").readOnly = true;
-
-      document.getElementById("registrationNumber").value =
-        student.registration_number || "";
-      document.getElementById("registrationNumber").readOnly = true;
-
-      document.getElementById("registrationDate").value =
-        student.registration_date || "";
-      document.getElementById("registrationDate").readOnly = true;
-
-      document.getElementById("educationLevel").value =
-        student.education_level_id || "";
-      document.getElementById("educationLevel").disabled = true;
-
-      document.getElementById("specialty").value = student.specialty_id || "";
-      document.getElementById("specialty").disabled = true;
-
-      document.getElementById("section").value = student.section_id || "";
-      document.getElementById("section").disabled = true;
-
-      document.getElementById("educationSystem").value =
-        student.education_system_id || "";
-      document.getElementById("educationSystem").disabled = true;
-
-      // Hide the save button
-      form.querySelector('button[type="submit"]').style.display = "none";
-
-      // Change the cancel button text
-      form.querySelector("#cancelModalBtn").textContent = "إغلاق";
-
-      // Remove form submit handler
-      form.onsubmit = (e) => {
-        e.preventDefault();
-        modal.classList.remove("open");
+      closeBtn.onclick = () => {
+        modal.style.display = "none";
+        // Re-enable form fields
+        Array.from(form.elements).forEach((input) => (input.disabled = false));
       };
+
+      cancelBtn.onclick = () => {
+        modal.style.display = "none";
+        // Re-enable form fields
+        Array.from(form.elements).forEach((input) => (input.disabled = false));
+      };
+    } else {
+      showNotification("فشل في تحميل بيانات الطالب", "error");
     }
+  } catch (error) {
+    console.error("Error viewing student:", error);
+    showNotification("حدث خطأ أثناء تحميل بيانات الطالب", "error");
+  } finally {
+    showLoading(false);
   }
 }
 
 // Edit student
-function editStudent(id) {
-  const student = students.find((s) => s.id === id);
+async function editStudent(id) {
+  try {
+    showLoading(true);
+    const response = await window.db.getById("/students", id);
 
-  if (!student) {
-    showNotification("لم يتم العثور على بيانات الطالب", "error");
-    return;
-  }
+    if (response.success) {
+      const student = response.data;
+      const modal = document.getElementById("studentModal");
+      const form = document.getElementById("studentForm");
+      const modalTitle = document.getElementById("modalTitle");
 
-  // Show the modal
-  const modal = document.getElementById("studentModal");
-  const modalTitle = document.getElementById("modalTitle");
-  const form = document.getElementById("studentForm");
+      // Set modal title and student ID
+      modalTitle.textContent = "تعديل بيانات الطالب";
+      form.setAttribute("data-student-id", id);
 
-  if (modal && modalTitle) {
-    modalTitle.textContent = "تعديل بيانات الطالب";
-    modal.classList.add("open");
-
-    // Fill form with student data
-    if (form) {
-      // Fill the form with student data
-      document.getElementById("studentId").value =
-        student.registration_id || "";
-      document.getElementById("firstName").value = student.first_name || "";
-      document.getElementById("lastName").value = student.last_name || "";
-      document.getElementById("gender").value = student.gender || "";
-      document.getElementById("birthDate").value = student.birth_date || "";
-      document.getElementById("birthPlace").value = student.birth_place || "";
-      document.getElementById("birthByJudgment").value =
-        student.birth_by_judgment || "";
-      document.getElementById("birthCertificate").value =
-        student.birth_certificate || "";
-      document.getElementById("birthRecordYear").value =
-        student.birth_record_year || "";
-      document.getElementById("birthCertificateNumber").value =
-        student.birth_certificate_number || "";
-      document.getElementById("registrationNumber").value =
-        student.registration_number || "";
-      document.getElementById("registrationDate").value =
-        student.registration_date || "";
-      document.getElementById("educationLevel").value =
-        student.education_level_id || "";
-      document.getElementById("specialty").value = student.specialty_id || "";
-      document.getElementById("section").value = student.section_id || "";
-      document.getElementById("educationSystem").value =
-        student.education_system_id || "";
-
-      // Enable all form fields
-      const inputs = form.querySelectorAll("input, select");
-      inputs.forEach((input) => {
-        input.disabled = false;
-        input.readOnly = false;
+      // Fill form fields
+      Object.keys(student).forEach((key) => {
+        const input = form.elements[key];
+        if (input) {
+          input.value = student[key];
+        }
       });
 
-      // Show the save button
-      const saveBtn = form.querySelector('button[type="submit"]');
-      saveBtn.style.display = "block";
-      saveBtn.textContent = "حفظ التغييرات";
+      // Show modal
+      modal.style.display = "block";
 
-      // Change the cancel button text
-      form.querySelector("#cancelModalBtn").textContent = "إلغاء";
+      // Setup close handlers
+      const closeBtn = modal.querySelector(".close-btn");
+      const cancelBtn = document.getElementById("cancelModalBtn");
 
-      // Set form submit handler to update student
-      form.onsubmit = async (e) => {
-        e.preventDefault();
-        await updateStudent(student.id, form);
-      };
+      closeBtn.onclick = () => (modal.style.display = "none");
+      cancelBtn.onclick = () => (modal.style.display = "none");
+    } else {
+      showNotification("فشل في تحميل بيانات الطالب", "error");
     }
+  } catch (error) {
+    console.error("Error editing student:", error);
+    showNotification("حدث خطأ أثناء تحميل بيانات الطالب", "error");
+  } finally {
+    showLoading(false);
   }
 }
 
-// Add student to database
+// Add new student
 async function addStudent(form) {
   try {
     showLoading(true);
 
     // Get form data
     const formData = new FormData(form);
-    const studentData = {};
+    let studentData = Object.fromEntries(formData.entries());
 
-    // Convert FormData to object
-    formData.forEach((value, key) => {
-      // Convert ID fields to integers
-      if (key.endsWith("_id") && value) {
-        studentData[key] = parseInt(value);
-      } else {
-        studentData[key] = value;
-      }
+    // Ensure registration_id is treated as a string
+    if (studentData.registration_id) {
+      studentData.registration_id = studentData.registration_id.toString();
+    }
+
+    // Debug log
+    console.log("Adding student with data:", {
+      ...studentData,
+      registration_id_type: typeof studentData.registration_id,
+      registration_id_length: studentData.registration_id?.length,
     });
 
-    // Set default active status
-    studentData.active = 1;
-
-    // Send to API
+    // Add student
     const response = await window.db.add("/students", studentData);
+
+    console.log("Server response:", response);
 
     if (response.success) {
       showNotification("تم إضافة الطالب بنجاح", "success");
 
-      // Close the modal
-      const modal = document.getElementById("studentModal");
-      if (modal) {
-        modal.classList.remove("open");
-      }
+      // Close modal
+      document.getElementById("studentModal").style.display = "none";
 
       // Reload students
       await loadStudents();
     } else {
-      throw new Error(response.error || "Failed to add student");
+      showNotification("فشل في إضافة الطالب", "error");
     }
-
-    showLoading(false);
   } catch (error) {
     console.error("Error adding student:", error);
     showNotification("حدث خطأ أثناء إضافة الطالب", "error");
+  } finally {
     showLoading(false);
   }
 }
 
-// Update student in database
+// Update existing student
 async function updateStudent(id, form) {
   try {
     showLoading(true);
 
+    // First get existing student data
+    const existingStudentResponse = await window.db.getById("/students", id);
+    if (!existingStudentResponse.success) {
+      throw new Error("Failed to fetch existing student data");
+    }
+    const existingStudent = existingStudentResponse.data;
+
+    console.log("Existing student data:", existingStudent);
+
     // Get form data
     const formData = new FormData(form);
-    const studentData = {};
+    const updatedData = Object.fromEntries(formData.entries());
 
-    // Convert FormData to object
-    formData.forEach((value, key) => {
-      // Convert ID fields to integers
-      if (key.endsWith("_id") && value) {
-        studentData[key] = parseInt(value);
-      } else {
-        studentData[key] = value;
-      }
+    // Debug log form data
+    console.log("Form data before processing:", {
+      ...updatedData,
+      registration_id_type: typeof updatedData.registration_id,
+      registration_id_length: updatedData.registration_id?.length,
     });
 
-    // Ensure the ID is included
-    studentData.id = id;
-
-    // Maintain active status (from existing student data)
-    const existingStudent = students.find((s) => s.id === id);
-    if (existingStudent) {
-      studentData.active = existingStudent.active;
+    // Ensure registration_id is treated as a string
+    if (updatedData.registration_id) {
+      updatedData.registration_id = updatedData.registration_id.toString();
     }
 
-    // Send to API
+    // Merge existing data with updated data
+    const studentData = {
+      ...existingStudent,
+      ...updatedData,
+      id: id, // Ensure ID is preserved
+      active: existingStudent.active, // Preserve active status
+      // Keep registration_id as string
+      registration_id:
+        updatedData.registration_id || existingStudent.registration_id,
+      // Convert other ID fields to numbers
+      education_level_id: updatedData.education_level_id
+        ? Number(updatedData.education_level_id)
+        : existingStudent.education_level_id,
+      specialty_id: updatedData.specialty_id
+        ? Number(updatedData.specialty_id)
+        : existingStudent.specialty_id,
+      section_id: updatedData.section_id
+        ? Number(updatedData.section_id)
+        : existingStudent.section_id,
+      education_system_id: updatedData.education_system_id
+        ? Number(updatedData.education_system_id)
+        : existingStudent.education_system_id,
+    };
+
+    // Debug log final data
+    console.log("Final data being sent to server:", {
+      ...studentData,
+      registration_id_type: typeof studentData.registration_id,
+      registration_id_length: studentData.registration_id?.length,
+    });
+
+    // Update student
     const response = await window.db.update(`/students/${id}`, studentData);
+
+    console.log("Server response:", response);
 
     if (response.success) {
       showNotification("تم تحديث بيانات الطالب بنجاح", "success");
 
-      // Close the modal
+      // Close modal
       const modal = document.getElementById("studentModal");
-      if (modal) {
-        modal.classList.remove("open");
-      }
+      modal.style.display = "none";
 
       // Reload students
       await loadStudents();
     } else {
-      throw new Error(response.error || "Failed to update student");
+      showNotification("فشل في تحديث بيانات الطالب", "error");
     }
-
-    showLoading(false);
   } catch (error) {
     console.error("Error updating student:", error);
     showNotification("حدث خطأ أثناء تحديث بيانات الطالب", "error");
+  } finally {
     showLoading(false);
   }
 }
@@ -1531,31 +1442,18 @@ async function deleteStudent(id) {
   try {
     showLoading(true);
 
-    // We'll do a soft delete by setting active to 0
-    const student = students.find((s) => s.id === id);
-    if (!student) {
-      throw new Error("Student not found");
-    }
-
-    // Set active status to 0
-    student.active = 0;
-
-    // Update in database
-    const response = await window.db.update(`/students/${id}`, student);
+    const response = await window.db.delete(`/students/${id}`);
 
     if (response.success) {
       showNotification("تم حذف الطالب بنجاح", "success");
-
-      // Reload students
       await loadStudents();
     } else {
-      throw new Error(response.error || "Failed to delete student");
+      showNotification("فشل في حذف الطالب", "error");
     }
-
-    showLoading(false);
   } catch (error) {
     console.error("Error deleting student:", error);
     showNotification("حدث خطأ أثناء حذف الطالب", "error");
+  } finally {
     showLoading(false);
   }
 }

@@ -51,7 +51,10 @@ function initDatabaseSchema() {
       [],
       (err) => {
         if (err) console.error("Error creating education_level table:", err);
-        else console.log("Education level table created successfully");
+        else {
+          console.log("Education level table created successfully");
+          seedEducationLevels();
+        }
       }
     );
 
@@ -70,7 +73,10 @@ function initDatabaseSchema() {
       [],
       (err) => {
         if (err) console.error("Error creating specialty table:", err);
-        else console.log("Specialty table created successfully");
+        else {
+          console.log("Specialty table created successfully");
+          seedSpecialties();
+        }
       }
     );
 
@@ -89,7 +95,10 @@ function initDatabaseSchema() {
       [],
       (err) => {
         if (err) console.error("Error creating education_system table:", err);
-        else console.log("Education system table created successfully");
+        else {
+          console.log("Education system table created successfully");
+          seedEducationSystems();
+        }
       }
     );
 
@@ -219,99 +228,71 @@ function initDatabaseSchema() {
       }
     );
 
-    // Create student_section table for many-to-many relationship
-    console.log("Creating student_section table...");
-    db.run(
-      `
-      CREATE TABLE IF NOT EXISTS student_section (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,         -- معرف الطالب
-        section_id INTEGER NOT NULL,         -- معرف القسم
-        academic_year TEXT,                  -- السنة الأكاديمية
-        enrollment_date TEXT,                -- تاريخ التسجيل
-        status TEXT DEFAULT 'active',        -- حالة التسجيل
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(student_id, section_id, academic_year),
-        FOREIGN KEY (student_id) REFERENCES students (id),
-        FOREIGN KEY (section_id) REFERENCES sections (id)
-      )
-    `,
-      [],
-      (err) => {
-        if (err) console.error("Error creating student_section table:", err);
-        else console.log("Student_section table created successfully");
-      }
-    );
-
-    // Create teacher_subject table for many-to-many relationship
-    console.log("Creating teacher_subject table...");
-    db.run(
-      `
-      CREATE TABLE IF NOT EXISTS teacher_subject (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        teacher_id INTEGER NOT NULL,         -- معرف المعلم
-        subject_id INTEGER NOT NULL,         -- معرف المادة
-        academic_year TEXT,                  -- السنة الأكاديمية
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(teacher_id, subject_id, academic_year),
-        FOREIGN KEY (teacher_id) REFERENCES teachers (id),
-        FOREIGN KEY (subject_id) REFERENCES subjects (id)
-      )
-    `,
-      [],
-      (err) => {
-        if (err) console.error("Error creating teacher_subject table:", err);
-        else console.log("Teacher_subject table created successfully");
-      }
-    );
-
     // Create class_schedule table
     console.log("Creating class_schedule table...");
     db.run(
-      `
-      CREATE TABLE IF NOT EXISTS class_schedule (
+      `CREATE TABLE IF NOT EXISTS class_schedule (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        section_id INTEGER NOT NULL,         -- معرف القسم
-        teacher_id INTEGER NOT NULL,         -- معرف المعلم
-        subject_id INTEGER NOT NULL,         -- معرف المادة
-        day_of_week INTEGER,                 -- يوم الأسبوع (1-7)
-        start_time TEXT,                     -- وقت البدء
-        end_time TEXT,                       -- وقت الانتهاء
-        room TEXT,                           -- القاعة
+        section_id INTEGER NOT NULL,
+        teacher_id INTEGER NOT NULL,
+        subject_id INTEGER NOT NULL,
+        day_of_week TEXT NOT NULL,      -- يوم الأسبوع
+        start_time TEXT NOT NULL,       -- وقت البداية
+        end_time TEXT NOT NULL,         -- وقت النهاية
+        room TEXT,                      -- القاعة
         active INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(section_id, teacher_id, subject_id, day_of_week, start_time),
         FOREIGN KEY (section_id) REFERENCES sections (id),
         FOREIGN KEY (teacher_id) REFERENCES teachers (id),
-        FOREIGN KEY (subject_id) REFERENCES subjects (id)
-      )
-    `,
+        FOREIGN KEY (subject_id) REFERENCES subjects (id),
+        UNIQUE(section_id, teacher_id, subject_id, day_of_week, start_time)
+      )`,
       [],
       (err) => {
         if (err) console.error("Error creating class_schedule table:", err);
-        else console.log("Class_schedule table created successfully");
+        else console.log("Class schedule table created successfully");
+      }
+    );
+
+    // Create student_section table for tracking student enrollment in sections
+    console.log("Creating student_section table...");
+    db.run(
+      `CREATE TABLE IF NOT EXISTS student_section (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        section_id INTEGER NOT NULL,
+        academic_year TEXT NOT NULL,     -- السنة الدراسية
+        enrollment_date DATE NOT NULL,   -- تاريخ التسجيل
+        status TEXT DEFAULT 'active',    -- الحالة (active, transferred, graduated)
+        notes TEXT,                      -- ملاحظات
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES students (id),
+        FOREIGN KEY (section_id) REFERENCES sections (id),
+        UNIQUE(student_id, section_id, academic_year)
+      )`,
+      [],
+      (err) => {
+        if (err) console.error("Error creating student_section table:", err);
+        else console.log("Student section table created successfully");
       }
     );
 
     // Create attendance table
     console.log("Creating attendance table...");
     db.run(
-      `
-      CREATE TABLE IF NOT EXISTS attendance (
+      `CREATE TABLE IF NOT EXISTS attendance (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,         -- معرف الطالب
-        class_schedule_id INTEGER NOT NULL,  -- معرف الحصة الدراسية
-        attendance_date TEXT NOT NULL,       -- تاريخ الحضور
-        status TEXT NOT NULL,                -- الحالة (present, absent, late, excused)
-        notes TEXT,                          -- ملاحظات
-        created_by INTEGER,                  -- من سجل الحضور
+        student_id INTEGER NOT NULL,
+        class_schedule_id INTEGER NOT NULL,
+        attendance_date DATE NOT NULL,
+        status TEXT NOT NULL,           -- present, absent, late, excused
+        notes TEXT,
+        created_by TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(student_id, class_schedule_id, attendance_date),
         FOREIGN KEY (student_id) REFERENCES students (id),
         FOREIGN KEY (class_schedule_id) REFERENCES class_schedule (id),
-        FOREIGN KEY (created_by) REFERENCES teachers (id)
-      )
-    `,
+        UNIQUE(student_id, class_schedule_id, attendance_date)
+      )`,
       [],
       (err) => {
         if (err) console.error("Error creating attendance table:", err);
@@ -319,32 +300,30 @@ function initDatabaseSchema() {
       }
     );
 
-    // Create attendance_summary table for quick statistics
+    // Create attendance_summary table for monthly reports
     console.log("Creating attendance_summary table...");
     db.run(
-      `
-      CREATE TABLE IF NOT EXISTS attendance_summary (
+      `CREATE TABLE IF NOT EXISTS attendance_summary (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,         -- معرف الطالب
-        section_id INTEGER NOT NULL,         -- معرف القسم
-        subject_id INTEGER,                  -- معرف المادة
-        academic_year TEXT,                  -- السنة الأكاديمية
-        month INTEGER,                       -- الشهر
-        present_count INTEGER DEFAULT 0,     -- عدد مرات الحضور
-        absent_count INTEGER DEFAULT 0,      -- عدد مرات الغياب
-        late_count INTEGER DEFAULT 0,        -- عدد مرات التأخير
-        excused_count INTEGER DEFAULT 0,     -- عدد مرات الاستئذان
-        last_updated DATETIME,               -- آخر تحديث
-        UNIQUE(student_id, section_id, subject_id, academic_year, month),
+        student_id INTEGER NOT NULL,
+        section_id INTEGER NOT NULL,
+        subject_id INTEGER,
+        academic_year TEXT NOT NULL,
+        month INTEGER NOT NULL,         -- 1-12
+        present_count INTEGER DEFAULT 0,
+        absent_count INTEGER DEFAULT 0,
+        late_count INTEGER DEFAULT 0,
+        excused_count INTEGER DEFAULT 0,
+        last_updated DATETIME,
         FOREIGN KEY (student_id) REFERENCES students (id),
         FOREIGN KEY (section_id) REFERENCES sections (id),
-        FOREIGN KEY (subject_id) REFERENCES subjects (id)
-      )
-    `,
+        FOREIGN KEY (subject_id) REFERENCES subjects (id),
+        UNIQUE(student_id, section_id, subject_id, academic_year, month)
+      )`,
       [],
       (err) => {
         if (err) console.error("Error creating attendance_summary table:", err);
-        else console.log("Attendance_summary table created successfully");
+        else console.log("Attendance summary table created successfully");
       }
     );
 
@@ -460,82 +439,145 @@ function seedSections() {
   // We will add sections after education levels and specialties are created
   setTimeout(() => {
     // First, get the education levels
-    db.all("SELECT * FROM education_level", [], (err, educationLevels) => {
-      if (err) {
-        console.error("Error retrieving education levels:", err);
-        return;
-      }
-
-      // Then get the specialties
-      db.all("SELECT * FROM specialty", [], (err, specialties) => {
+    db.all(
+      "SELECT * FROM education_level WHERE active = 1",
+      [],
+      (err, educationLevels) => {
         if (err) {
-          console.error("Error retrieving specialties:", err);
+          console.error("Error retrieving education levels:", err);
           return;
         }
 
-        // Check if there are existing records in the sections table
-        db.get("SELECT COUNT(*) as count FROM sections", [], (err, row) => {
-          if (err) {
-            console.error("Error checking sections:", err);
-            return;
-          }
+        // Then get the specialties
+        db.all(
+          "SELECT * FROM specialty WHERE active = 1",
+          [],
+          (err, specialties) => {
+            if (err) {
+              console.error("Error retrieving specialties:", err);
+              return;
+            }
 
-          // Only seed if table is empty
-          if (row.count === 0) {
-            console.log("Seeding sections...");
+            // Check if there are existing records in the sections table
+            db.get("SELECT COUNT(*) as count FROM sections", [], (err, row) => {
+              if (err) {
+                console.error("Error checking sections:", err);
+                return;
+              }
 
-            // Add special case sections
-            const specialSections = [
-              {
-                name: "جذع مشترك آداب",
-                capacity: 40,
-                description: "قسم مشترك للعلوم الأدبية",
-              },
-              {
-                name: "جذع مشترك علوم",
-                capacity: 40,
-                description: "قسم مشترك للعلوم الطبيعية",
-              },
-            ];
+              // Only seed if table is empty
+              if (row.count === 0) {
+                console.log("Seeding sections...");
 
-            specialSections.forEach((section) => {
-              // Try to find appropriate specialty ID
-              const specialty = specialties.find(
-                (s) => s.name === section.name || s.name === "أدبي"
-              );
-              const specialtyId = specialty ? specialty.id : null;
+                // Create sections for each education level and specialty combination
+                educationLevels.forEach((level) => {
+                  // Extract the year number from the level name
+                  const yearMatch = level.name.match(
+                    /الأولى|الثانية|الثالثة|الرابعة|الخامسة|السادسة/
+                  );
+                  if (!yearMatch) return;
 
-              // Use the first education level ID for these sections
-              const educationLevelId =
-                educationLevels.length > 0 ? educationLevels[0].id : null;
+                  // For first year, create common trunk sections
+                  if (level.name.includes("الأولى")) {
+                    // Create جذع مشترك آداب section
+                    db.run(
+                      `INSERT INTO sections (
+                    name, 
+                    capacity, 
+                    education_level_id, 
+                    specialty_id, 
+                    description,
+                    year,
+                    active
+                  ) VALUES (?, ?, ?, ?, ?, ?, 1)`,
+                      [
+                        "جذع مشترك آداب",
+                        40,
+                        level.id,
+                        specialties.find((s) => s.name === "أدبي")?.id,
+                        "قسم مشترك للعلوم الأدبية والإنسانية",
+                        new Date().getFullYear().toString(),
+                      ],
+                      (err) => {
+                        if (err)
+                          console.error("Error creating آداب section:", err);
+                        else console.log("Created جذع مشترك آداب section");
+                      }
+                    );
 
-              db.run(
-                "INSERT INTO sections (name, capacity, education_level_id, specialty_id, active, description) VALUES (?, ?, ?, ?, 1, ?)",
-                [
-                  section.name,
-                  section.capacity,
-                  educationLevelId,
-                  specialtyId,
-                  section.description,
-                ],
-                (err) => {
-                  if (err) {
-                    console.error(
-                      `Error seeding special section ${section.name}:`,
-                      err
+                    // Create جذع مشترك علوم section
+                    db.run(
+                      `INSERT INTO sections (
+                    name, 
+                    capacity, 
+                    education_level_id, 
+                    specialty_id, 
+                    description,
+                    year,
+                    active
+                  ) VALUES (?, ?, ?, ?, ?, ?, 1)`,
+                      [
+                        "جذع مشترك علوم",
+                        40,
+                        level.id,
+                        specialties.find((s) => s.name === "علمي")?.id,
+                        "قسم مشترك للعلوم الطبيعية والرياضيات",
+                        new Date().getFullYear().toString(),
+                      ],
+                      (err) => {
+                        if (err)
+                          console.error("Error creating علوم section:", err);
+                        else console.log("Created جذع مشترك علوم section");
+                      }
                     );
                   } else {
-                    console.log(`Added special section: ${section.name}`);
+                    // For other years, create sections for each specialty
+                    specialties.forEach((specialty) => {
+                      // Skip جذع مشترك specialty for non-first year
+                      if (specialty.name.includes("جذع مشترك")) return;
+
+                      // Create section A and B for each combination
+                      ["أ", "ب"].forEach((suffix) => {
+                        const sectionName = `${level.name} ${specialty.name} ${suffix}`;
+                        db.run(
+                          `INSERT INTO sections (
+                        name, 
+                        capacity, 
+                        education_level_id, 
+                        specialty_id, 
+                        description,
+                        year,
+                        active
+                      ) VALUES (?, ?, ?, ?, ?, ?, 1)`,
+                          [
+                            sectionName,
+                            35, // Standard capacity
+                            level.id,
+                            specialty.id,
+                            `قسم ${specialty.name} للسنة ${level.name}`,
+                            new Date().getFullYear().toString(),
+                          ],
+                          (err) => {
+                            if (err)
+                              console.error(
+                                `Error creating section ${sectionName}:`,
+                                err
+                              );
+                            else console.log(`Created section: ${sectionName}`);
+                          }
+                        );
+                      });
+                    });
                   }
-                }
-              );
+                });
+              } else {
+                console.log("Sections table already has data, skipping seed");
+              }
             });
-          } else {
-            console.log("Sections table already has data, skipping seed");
           }
-        });
-      });
-    });
+        );
+      }
+    );
   }, 1000); // Wait 1 second to ensure education levels and specialties are created first
 }
 

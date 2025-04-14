@@ -5,6 +5,7 @@
 // Global variables
 let currentFile = null;
 let currentFileType = null;
+let isLoading = false;
 
 // Remove module imports since we're using script tags
 // const store = {
@@ -16,22 +17,44 @@ let currentFileType = null;
 document.addEventListener("DOMContentLoaded", () => {
   setupFileUpload();
   initializeApp();
+  setupThemeToggle();
 });
 
 /**
  * Initialize the application
  */
 async function initializeApp() {
-  // Check if we're running the backend
-  const backendConnected = await checkBackendConnection();
-  updateConnectionStatus(backendConnected);
+  setLoading(true);
+  try {
+    // Check backend connection
+    const backendConnected = await checkBackendConnection();
+    updateConnectionStatus(backendConnected);
 
-  // Initialize components
-  initializeSidebar();
-  updateHeaderInfo();
+    if (backendConnected) {
+      // Initialize components
+      await Promise.all([updateDashboardStats(), loadRecentActivity()]);
+    }
+  } catch (error) {
+    console.error("Error initializing app:", error);
+    showNotification("حدث خطأ أثناء تحميل البيانات", "error");
+  } finally {
+    setLoading(false);
+  }
+}
 
-  // Load dashboard stats
-  await updateDashboardStats();
+/**
+ * Set loading state for the dashboard
+ */
+function setLoading(loading) {
+  isLoading = loading;
+  const statsCards = document.querySelectorAll(".stat-card");
+  statsCards.forEach((card) => {
+    if (loading) {
+      card.classList.add("loading");
+    } else {
+      card.classList.remove("loading");
+    }
+  });
 }
 
 /**
@@ -52,15 +75,17 @@ async function checkBackendConnection() {
  * @param {boolean} isConnected - Whether the backend is connected
  */
 function updateConnectionStatus(isConnected) {
-  const connectionStatusElement = document.getElementById("connectionStatus");
-  if (!connectionStatusElement) return;
+  const statusIndicator = document.getElementById("backendStatus");
+  const statusText = statusIndicator.querySelector(".status-text");
 
   if (isConnected) {
-    connectionStatusElement.textContent = "متصل بقاعدة البيانات";
-    connectionStatusElement.className = "badge bg-success";
+    statusIndicator.classList.remove("offline");
+    statusIndicator.classList.add("online");
+    statusText.textContent = "متصل";
   } else {
-    connectionStatusElement.textContent = "غير متصل بقاعدة البيانات";
-    connectionStatusElement.className = "badge bg-danger";
+    statusIndicator.classList.remove("online");
+    statusIndicator.classList.add("offline");
+    statusText.textContent = "غير متصل";
   }
 }
 
@@ -121,28 +146,102 @@ function updateHeaderInfo() {
  * Update dashboard statistics
  */
 async function updateDashboardStats() {
-  const studentsCountElement = document.getElementById("studentsCount");
-  const teachersCountElement = document.getElementById("teachersCount");
+  try {
+    const [studentsCount, teachersCount, classesCount] = await Promise.all([
+      api.getStudentCount(),
+      api.getTeacherCount(),
+      api.getClassCount(),
+    ]);
 
-  if (studentsCountElement) {
-    try {
-      const count = await db.getStudentCount();
-      studentsCountElement.textContent = count;
-    } catch (error) {
-      console.error("Error getting student count:", error);
-      studentsCountElement.textContent = "0";
-    }
+    document.getElementById("totalStudents").textContent =
+      studentsCount.data || 0;
+    document.getElementById("totalTeachers").textContent =
+      teachersCount.data || 0;
+    document.getElementById("totalClasses").textContent =
+      classesCount.data || 0;
+  } catch (error) {
+    console.error("Error updating dashboard stats:", error);
+    showNotification("تعذر تحديث إحصائيات لوحة التحكم", "error");
   }
+}
 
-  if (teachersCountElement) {
-    try {
-      const count = await db.getTeacherCount();
-      teachersCountElement.textContent = count;
-    } catch (error) {
-      console.error("Error getting teacher count:", error);
-      teachersCountElement.textContent = "0";
+/**
+ * Load recent activity
+ */
+async function loadRecentActivity() {
+  const activityList = document.getElementById("activityList");
+  if (!activityList) return;
+
+  try {
+    const response = await api.getRecentActivity();
+    if (response.success && response.data) {
+      activityList.innerHTML = response.data
+        .map(
+          (activity) => `
+          <div class="activity-item">
+            <i class="fas ${getActivityIcon(activity.type)}"></i>
+            <div class="activity-content">
+              <p>${activity.description}</p>
+              <small>${formatDate(activity.timestamp)}</small>
+            </div>
+          </div>
+        `
+        )
+        .join("");
     }
+  } catch (error) {
+    console.error("Error loading recent activity:", error);
+    activityList.innerHTML = '<p class="text-muted">لا توجد نشاطات حديثة</p>';
   }
+}
+
+/**
+ * Get icon class for activity type
+ */
+function getActivityIcon(type) {
+  const icons = {
+    student: "fa-user-graduate",
+    teacher: "fa-chalkboard-teacher",
+    class: "fa-school",
+    attendance: "fa-clipboard-check",
+    default: "fa-info-circle",
+  };
+  return icons[type] || icons.default;
+}
+
+/**
+ * Format date for display
+ */
+function formatDate(timestamp) {
+  return new Date(timestamp).toLocaleDateString("ar-LY", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * Setup theme toggle
+ */
+function setupThemeToggle() {
+  const themeToggle = document.getElementById("themeToggle");
+  const icon = themeToggle.querySelector("i");
+
+  // Check saved theme
+  const savedTheme = localStorage.getItem("theme") || "light";
+  document.body.setAttribute("data-theme", savedTheme);
+  icon.className = savedTheme === "dark" ? "fas fa-sun" : "fas fa-moon";
+
+  themeToggle.addEventListener("click", () => {
+    const currentTheme = document.body.getAttribute("data-theme");
+    const newTheme = currentTheme === "dark" ? "light" : "dark";
+
+    document.body.setAttribute("data-theme", newTheme);
+    localStorage.setItem("theme", newTheme);
+    icon.className = newTheme === "dark" ? "fas fa-sun" : "fas fa-moon";
+  });
 }
 
 /**

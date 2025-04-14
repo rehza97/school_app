@@ -1,45 +1,27 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/teacher.dart';
+import 'firebase_service.dart';
 
 class AuthService {
   static const String _currentTeacherKey = 'current_teacher';
   final SharedPreferences _prefs;
+  final FirebaseService _firebaseService;
 
-  // Simple test data with short codes
-  final List<Teacher> _teachers = [
-    Teacher(
-      id: '1',
-      name: 'Math Teacher',
-      subject: 'Mathematics',
-      accessCode: '111', // Simple 3-digit code
-    ),
-    Teacher(
-      id: '2',
-      name: 'Science Teacher',
-      subject: 'Science',
-      accessCode: '222', // Simple 3-digit code
-    ),
-    Teacher(
-      id: '3',
-      name: 'English Teacher',
-      subject: 'English',
-      accessCode: '333', // Simple 3-digit code
-    ),
-  ];
+  AuthService(this._prefs) : _firebaseService = FirebaseService();
 
-  AuthService(this._prefs);
-
-  Future<Teacher?> login(String accessCode) async {
-    if (accessCode.isEmpty) {
-      throw Exception('Access code cannot be empty');
+  Future<Teacher?> login(String code) async {
+    if (code.isEmpty) {
+      throw Exception('رمز الدخول لا يمكن أن يكون فارغاً');
     }
 
     try {
-      final teacher = _teachers.firstWhere(
-        (t) => t.accessCode == accessCode.trim(),
-        orElse: () => throw Exception('Invalid access code'),
-      );
+      // Get teacher from Firestore using the code
+      final teacher = await _firebaseService.getTeacherByCode(code.trim());
+
+      if (teacher == null) {
+        throw Exception('رمز الدخول غير صحيح');
+      }
 
       // Save the logged-in teacher
       await _prefs.setString(_currentTeacherKey, jsonEncode(teacher.toJson()));

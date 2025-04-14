@@ -6,7 +6,7 @@
 
 // Common API configuration
 const API_CONFIG = {
-  BASE_URL: "http://localhost:3001/api",
+  BASE_URL: "http://localhost:3000/api",
   STUDENTS: "/students",
   TEACHERS: "/teachers",
   SECTIONS: "/sections",

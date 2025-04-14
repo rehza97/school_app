@@ -98,7 +98,7 @@ async function initialize() {
     updateStats();
 
     // Load subject filters after loading teachers
-    loadSubjectFilters();
+  loadSubjectFilters();
 
     // Load reference data
     await loadReferenceData();
@@ -315,9 +315,9 @@ async function updateStats() {
     }
 
     if (totalSubjectsElement) {
-      // Get unique subjects
+    // Get unique subjects
       const uniqueSubjects = new Set();
-      teachers.forEach((teacher) => {
+    teachers.forEach((teacher) => {
         if (teacher.subject_name) {
           uniqueSubjects.add(teacher.subject_name);
         }
@@ -372,11 +372,11 @@ function loadSubjectFilters() {
     Array.from(uniqueSubjects)
       .sort()
       .forEach((subject) => {
-        const option = document.createElement("option");
-        option.value = subject;
-        option.textContent = subject;
-        subjectFilter.appendChild(option);
-      });
+      const option = document.createElement("option");
+      option.value = subject;
+      option.textContent = subject;
+      subjectFilter.appendChild(option);
+    });
   } catch (error) {
     console.error("Error loading subject filters:", error);
   }
@@ -671,18 +671,18 @@ function addActionButtonListeners() {
 
 // Open add teacher modal
 function openAddTeacherModal() {
-  isEditMode = false;
-  modalTitle.textContent = "إضافة معلم جديد";
+    isEditMode = false;
+    modalTitle.textContent = "إضافة معلم جديد";
   teacherForm.reset();
-  teacherId.value = "";
-  teacherStatus.value = "active";
+    teacherId.value = "";
+    teacherStatus.value = "active";
 
   // Make sure reference data is loaded for dropdowns
   if (!subjects.length || !roles.length) {
     loadReferenceData();
   }
 
-  teacherModal.style.display = "block";
+    teacherModal.style.display = "block";
 }
 
 // Open edit teacher modal
@@ -693,10 +693,10 @@ function openEditTeacherModal(id) {
   // Find teacher by ID
   const teacher = teachers.find((t) => t.id == id || t.registration_id == id);
 
-  if (!teacher) {
+    if (!teacher) {
     showNotification("لم يتم العثور على بيانات المعلم", "error");
-    return;
-  }
+      return;
+    }
 
   // Ensure reference data is loaded
   if (!subjects.length || !roles.length) {
@@ -761,9 +761,9 @@ function populateFormWithTeacher(teacher) {
     }
   }
 
-  teacherStatus.value = teacher.active !== false ? "active" : "inactive";
-  teacherPhone.value = teacher.phone || "";
-  teacherEmail.value = teacher.email || "";
+    teacherStatus.value = teacher.active !== false ? "active" : "inactive";
+    teacherPhone.value = teacher.phone || "";
+    teacherEmail.value = teacher.email || "";
 }
 
 // Close modal
@@ -882,8 +882,8 @@ function handleFileUploadBtnClick() {
   if (!fileInput) {
     console.error("Excel file input not found in DOM");
     showNotification("تعذر فتح نافذة اختيار الملف", "error");
-    return;
-  }
+      return;
+    }
 
   console.log("Clicking the file input element");
   fileInput.click();
@@ -1012,7 +1012,7 @@ function readExcelFile(file) {
           console.log("Converting worksheet to array format...");
           const rawData = XLSX.utils.sheet_to_json(worksheet, {
             header: 1, // Use numeric indexing
-            raw: false,
+          raw: false,
             defval: "", // Default empty cells to empty string
           });
 
@@ -1197,7 +1197,7 @@ async function processTeacherData() {
         (processedRecord.role_name && processedRecord.subject_name)
       ) {
         processedData.push(processedRecord);
-      } else {
+        } else {
         console.warn(
           `Skipping record ${i + 1} due to missing required fields:`,
           record
@@ -1372,23 +1372,23 @@ function setupEventListeners() {
   // Pagination buttons
   if (prevPageBtn) {
     prevPageBtn.addEventListener("click", function () {
-      if (currentPage > 1) {
-        currentPage--;
-        renderTeachersTable();
-        renderPagination();
-      }
-    });
+    if (currentPage > 1) {
+      currentPage--;
+      renderTeachersTable();
+      renderPagination();
+    }
+  });
   }
 
   if (nextPageBtn) {
     nextPageBtn.addEventListener("click", function () {
-      const totalPages = Math.ceil(filteredTeachers.length / pageSize);
-      if (currentPage < totalPages) {
-        currentPage++;
-        renderTeachersTable();
-        renderPagination();
-      }
-    });
+    const totalPages = Math.ceil(filteredTeachers.length / pageSize);
+    if (currentPage < totalPages) {
+      currentPage++;
+      renderTeachersTable();
+      renderPagination();
+    }
+  });
   }
 }
 
@@ -1465,7 +1465,7 @@ function setupFileUpload() {
 
   // Add event listener to file input for file selection
   if (excelFileInput) {
-    excelFileInput.addEventListener("change", handleFileChange);
+  excelFileInput.addEventListener("change", handleFileChange);
     console.log("Added event listener to excelFileInput");
   } else {
     console.error("excelFileInput element not found");

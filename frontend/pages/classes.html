@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>إدارة الفصول | نظام إدارة المدرسة</title>
+    <title>إدارة الصفوف - نظام إدارة المدرسة</title>
     <link rel="stylesheet" href="../css/style.css" />
     <link rel="stylesheet" href="../css/classes.css" />
     <link
@@ -76,10 +76,18 @@
       <main class="main-content">
         <header>
           <div class="header-content">
-            <h1>إدارة الفصول</h1>
+            <h1>إدارة الصفوف</h1>
             <div class="user-info">
               <span class="user-name">المدير</span>
               <i class="fas fa-user-circle"></i>
+            </div>
+            <div class="header-actions">
+              <button id="addLevelBtn" class="btn-primary">
+                <i class="fas fa-plus"></i> إضافة سنة دراسية
+              </button>
+              <button id="exportExcelBtn" class="btn-secondary">
+                <i class="fas fa-file-excel"></i> تصدير إلى Excel
+              </button>
             </div>
           </div>
         </header>
@@ -88,21 +96,21 @@
           <!-- Stats -->
           <div class="stats-container">
             <div class="stat-card">
-              <i class="fas fa-chart-bar"></i>
+              <i class="fas fa-layer-group"></i>
               <div class="stat-info">
                 <h3>السنوات الدراسية</h3>
                 <p id="totalLevels">0</p>
               </div>
             </div>
             <div class="stat-card">
-              <i class="fas fa-list-alt"></i>
+              <i class="fas fa-sitemap"></i>
               <div class="stat-info">
                 <h3>الشعب</h3>
                 <p id="totalSpecialties">0</p>
               </div>
             </div>
             <div class="stat-card">
-              <i class="fas fa-school"></i>
+              <i class="fas fa-users"></i>
               <div class="stat-info">
                 <h3>الأقسام</h3>
                 <p id="totalSections">0</p>
@@ -113,45 +121,36 @@
           <!-- Hierarchy Management -->
           <div class="card">
             <div class="card-header">
-              <h2>الهيكل التنظيمي للفصول</h2>
-              <div class="header-actions">
-                <button id="expandAllBtn" class="btn-secondary">
-                  <i class="fas fa-expand-alt"></i> توسيع الكل
+              <h2>الهيكل التنظيمي</h2>
+              <div class="tree-actions">
+                <button id="expandAllBtn" class="btn-text">
+                  <i class="fas fa-expand"></i> توسيع الكل
                 </button>
-                <button id="collapseAllBtn" class="btn-secondary">
-                  <i class="fas fa-compress-alt"></i> طي الكل
-                </button>
-                <button id="addLevelBtn" class="btn-primary">
-                  <i class="fas fa-plus"></i> إضافة سنة دراسية
+                <button id="collapseAllBtn" class="btn-text">
+                  <i class="fas fa-compress"></i> طي الكل
                 </button>
               </div>
             </div>
             <div class="card-body">
-              <div class="hierarchy-tree" id="hierarchyTree">
-                <!-- Hierarchy tree will be added here dynamically -->
-              </div>
-
-              <!-- Empty state message -->
               <div id="emptyState" class="empty-state" style="display: none">
-                <i class="fas fa-school empty-icon"></i>
-                <h3>لا توجد بيانات للعرض</h3>
-                <p>
-                  قم بإضافة سنة دراسية جديدة للبدء في إنشاء الهيكل التنظيمي
-                  للفصول
-                </p>
-                <button id="addFirstLevelBtn" class="btn-primary">
+                <i class="fas fa-sitemap"></i>
+                <h3>لا يوجد هيكل تنظيمي</h3>
+                <p>قم بإضافة سنة دراسية للبدء في بناء الهيكل التنظيمي</p>
+                <button onclick="showLevelModal()" class="btn-primary">
                   <i class="fas fa-plus"></i> إضافة سنة دراسية
                 </button>
               </div>
+
+              <div id="hierarchyTree" class="hierarchy-tree"></div>
             </div>
           </div>
 
           <!-- Class Students -->
           <div class="card" id="classStudentsCard" style="display: none">
             <div class="card-header">
-              <h2>طلاب الفصل: <span id="selectedClassName">-</span></h2>
-              <button id="closeClassViewBtn" class="btn-secondary">
-                <i class="fas fa-times"></i> إغلاق
+              <h2>طلاب القسم: <span id="selectedClassName"></span></h2>
+              <button class="btn-primary" onclick="showAddStudentModal()">
+                <i class="fas fa-user-plus"></i> إضافة طالب
               </button>
             </div>
             <div class="card-body">
@@ -172,10 +171,10 @@
                 <table id="classStudentsTable" class="data-table">
                   <thead>
                     <tr>
-                      <th>الرقم التسلسلي</th>
-                      <th>رقم التعريف</th>
-                      <th>اللقب</th>
-                      <th>الاسم</th>
+                      <th>#</th>
+                      <th>رقم التسجيل</th>
+                      <th>اسم العائلة</th>
+                      <th>الاسم الأول</th>
                       <th>تاريخ الميلاد</th>
                       <th>الجنس</th>
                       <th>الحالة</th>
@@ -191,13 +190,13 @@
               <!-- Pagination -->
               <div class="pagination">
                 <button id="studentPrevPage" class="pagination-btn">
-                  <i class="fas fa-chevron-right"></i> السابق
+                  السابق
                 </button>
                 <div id="studentPageNumbers" class="page-numbers">
                   <!-- Page numbers will be added here -->
                 </div>
                 <button id="studentNextPage" class="pagination-btn">
-                  التالي <i class="fas fa-chevron-left"></i>
+                  التالي
                 </button>
               </div>
             </div>
@@ -210,12 +209,12 @@
     <div id="levelModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3 id="levelModalTitle">إضافة سنة دراسية</h3>
-          <span class="close" id="levelModalClose">&times;</span>
+          <h2 id="levelModalTitle">إضافة سنة دراسية</h2>
+          <button id="levelModalClose" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
           <form id="levelForm">
-            <input type="hidden" id="levelId" />
+            <input type="hidden" name="levelId" />
             <div class="form-group">
               <label for="levelName">اسم السنة الدراسية</label>
               <input
@@ -227,7 +226,7 @@
               />
             </div>
             <div class="form-group">
-              <label for="levelDescription">وصف السنة الدراسية</label>
+              <label for="levelDescription">الوصف</label>
               <textarea
                 id="levelDescription"
                 name="levelDescription"
@@ -242,7 +241,7 @@
                 <!-- Teachers will be loaded dynamically -->
               </select>
             </div>
-            <div class="form-actions">
+            <div class="modal-footer">
               <button type="button" id="cancelLevelBtn" class="btn-secondary">
                 إلغاء
               </button>
@@ -257,13 +256,13 @@
     <div id="specialtyModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3 id="specialtyModalTitle">إضافة شعبة</h3>
-          <span class="close" id="specialtyModalClose">&times;</span>
+          <h2 id="specialtyModalTitle">إضافة شعبة</h2>
+          <button id="specialtyModalClose" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
           <form id="specialtyForm">
-            <input type="hidden" id="specialtyId" />
-            <input type="hidden" id="specialtyLevelId" />
+            <input type="hidden" name="specialtyId" />
+            <input type="hidden" name="specialtyLevelId" />
             <div class="form-group">
               <label for="specialtyName">اسم الشعبة</label>
               <input
@@ -275,7 +274,7 @@
               />
             </div>
             <div class="form-group">
-              <label for="specialtyDescription">وصف الشعبة</label>
+              <label for="specialtyDescription">الوصف</label>
               <textarea
                 id="specialtyDescription"
                 name="specialtyDescription"
@@ -290,7 +289,7 @@
                 <!-- Teachers will be loaded dynamically -->
               </select>
             </div>
-            <div class="form-actions">
+            <div class="modal-footer">
               <button
                 type="button"
                 id="cancelSpecialtyBtn"
@@ -309,13 +308,13 @@
     <div id="sectionModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3 id="sectionModalTitle">إضافة قسم</h3>
-          <span class="close" id="sectionModalClose">&times;</span>
+          <h2 id="sectionModalTitle">إضافة قسم</h2>
+          <button id="sectionModalClose" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
           <form id="sectionForm">
-            <input type="hidden" id="sectionId" />
-            <input type="hidden" id="sectionSpecialtyId" />
+            <input type="hidden" name="sectionId" />
+            <input type="hidden" name="sectionSpecialtyId" />
             <div class="form-group">
               <label for="sectionName">اسم القسم</label>
               <input
@@ -327,14 +326,13 @@
               />
             </div>
             <div class="form-group">
-              <label for="sectionCapacity">السعة القصوى</label>
+              <label for="sectionCapacity">السعة</label>
               <input
                 type="number"
                 id="sectionCapacity"
                 name="sectionCapacity"
-                required
                 min="1"
-                placeholder="عدد الطلاب الأقصى"
+                required
               />
             </div>
             <div class="form-group">
@@ -344,7 +342,7 @@
                 <!-- Teachers will be loaded dynamically -->
               </select>
             </div>
-            <div class="form-actions">
+            <div class="modal-footer">
               <button type="button" id="cancelSectionBtn" class="btn-secondary">
                 إلغاء
               </button>
@@ -355,23 +353,23 @@
       </div>
     </div>
 
-    <!-- Confirm Delete Modal -->
+    <!-- Confirm Modal -->
     <div id="confirmModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3 id="confirmModalTitle">تأكيد الحذف</h3>
-          <span class="close" id="confirmModalClose">&times;</span>
+          <h2 id="confirmModalTitle">تأكيد</h2>
+          <button id="confirmModalClose" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
           <p id="confirmModalMessage">هل أنت متأكد من حذف هذا العنصر؟</p>
-          <div class="form-actions">
-            <button type="button" id="cancelConfirmBtn" class="btn-secondary">
-              إلغاء
-            </button>
-            <button type="button" id="confirmBtn" class="btn-danger">
-              حذف
-            </button>
-          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancelConfirmBtn" class="btn-secondary">
+            إلغاء
+          </button>
+          <button type="button" id="confirmBtn" class="btn-primary">
+            تأكيد
+          </button>
         </div>
       </div>
     </div>

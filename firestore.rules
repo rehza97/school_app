@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Teachers can read only their own document
+    match /teachers/{teacherId} {
+      allow read: if true; // Allow reading teacher data for login
+    }
+
+    // Students and parents data - read only
+    match /students/{studentId} {
+      allow read: if true;
+    }
+    
+    match /parents/{parentId} {
+      allow read: if true;
+    }
+
+    // Classes - read only
+    match /classes/{classId} {
+      allow read: if true;
+    }
+
+    // Courses - read only
+    match /courses/{courseId} {
+      allow read: if true;
+      
+      // Sessions - read only
+      match /sessions/{sessionId} {
+        allow read: if true;
+        
+        // Attendance - read and write
+        match /attendance/{studentId} {
+          allow read, write: if true;
+        }
+      }
+    }
+  }
+} 

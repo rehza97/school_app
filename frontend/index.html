@@ -117,65 +117,38 @@
             </div>
           </div>
 
-          <!-- Upload Section -->
-          <div class="upload-section">
-            <h2>استيراد البيانات</h2>
-            <div class="upload-buttons">
-              <div class="upload-card">
-                <h3>استيراد بيانات المعلمين</h3>
-                <div class="drag-drop-zone" id="teacherDragDropZone">
-                  <div class="upload-container">
-                    <div class="file-input-wrapper">
-                      <i class="fas fa-chalkboard-teacher"></i>
-                      <p>اسحب وأفلت ملف المعلمين هنا أو</p>
-                      <label for="teacherExcelFile" class="file-label">
-                        <span>اختر ملف المعلمين</span>
-                      </label>
-                      <input
-                        type="file"
-                        id="teacherExcelFile"
-                        accept=".xlsx, .xls"
-                        title="حدد ملف Excel للمعلمين"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Preview Section -->
-            <div
-              class="preview-section"
-              id="previewSection"
-              style="display: none"
-            >
-              <h3>معاينة البيانات</h3>
-              <div class="preview-controls">
-                <span class="record-count"
-                  >عدد السجلات: <span id="recordCount">0</span></span
-                >
-                <div class="preview-buttons">
-                  <button id="cancelBtn" class="btn-secondary">
-                    <i class="fas fa-times"></i> إلغاء
-                  </button>
-                  <button id="uploadBtn" class="btn-primary">
-                    <i class="fas fa-upload"></i> رفع الملف
-                  </button>
-                </div>
-              </div>
-              <div class="preview-table-wrapper">
-                <table id="previewTable" class="preview-table">
-                  <!-- Table content will be dynamically added here -->
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Recent Activity -->
-          <div class="recent-activity">
-            <h2>النشاطات الأخيرة</h2>
-            <div class="activity-list" id="activityList">
-              <!-- Activity items will be dynamically added here -->
+          <!-- Quick Actions -->
+          <div class="quick-actions">
+            <h2>إجراءات سريعة</h2>
+            <div class="actions-grid">
+              <button
+                class="action-card"
+                onclick="window.location.href='./pages/students.html?action=add'"
+              >
+                <i class="fas fa-user-plus"></i>
+                <span>إضافة طالب جديد</span>
+              </button>
+              <button
+                class="action-card"
+                onclick="window.location.href='./pages/teachers.html?action=add'"
+              >
+                <i class="fas fa-user-tie"></i>
+                <span>إضافة معلم جديد</span>
+              </button>
+              <button
+                class="action-card"
+                onclick="window.location.href='./pages/classes.html?action=add'"
+              >
+                <i class="fas fa-school"></i>
+                <span>إضافة فصل جديد</span>
+              </button>
+              <button
+                class="action-card"
+                onclick="window.location.href='./pages/attendance.html'"
+              >
+                <i class="fas fa-clipboard-check"></i>
+                <span>تسجيل الحضور</span>
+              </button>
             </div>
           </div>
         </div>
