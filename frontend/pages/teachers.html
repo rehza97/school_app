@@ -16,8 +16,137 @@
     />
     <!-- Add SheetJS library -->
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <!-- Firebase Config -->
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyCq4l4Ppt60zXz_m46HbK6qchu7HBAbNMA",
+        authDomain: "myschool-d8bbe.firebaseapp.com",
+        projectId: "myschool-d8bbe",
+        storageBucket: "myschool-d8bbe.firebasestorage.app",
+        messagingSenderId: "888939871515",
+        appId: "1:888939871515:web:7a7042a5a268fa9d79a7be",
+        measurementId: "G-9SR1L1THQC",
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+
+      // Initialize collections
+      const teachersRef = db.collection("teachers");
+      const subjectsRef = db.collection("subjects");
+      const rolesRef = db.collection("roles");
+
+      // Function to check Firebase connection
+      async function checkFirebaseConnection() {
+        try {
+          await db.collection("teachers").get();
+          return true;
+        } catch (error) {
+          console.error("Firebase connection error:", error);
+          return false;
+        }
+      }
+
+      // Function to load subjects
+      async function loadSubjects() {
+        try {
+          const snapshot = await subjectsRef.get();
+          const select = document.getElementById("teacherSubject");
+          const filterSelect = document.getElementById("subjectFilter");
+
+          // Clear existing options except the first one
+          select.innerHTML = '<option value="">اختر المادة</option>';
+          filterSelect.innerHTML = '<option value="">جميع المواد</option>';
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const option = new Option(data.name, doc.id);
+            const filterOption = new Option(data.name, doc.id);
+            select.add(option);
+            filterSelect.add(filterOption);
+          });
+        } catch (error) {
+          console.error("Error loading subjects:", error);
+          showNotification("حدث خطأ أثناء تحميل المواد", "error");
+        }
+      }
+
+      // Function to load roles
+      async function loadRoles() {
+        try {
+          const snapshot = await rolesRef.get();
+          const select = document.getElementById("teacherRole");
+
+          // Clear existing options except the first one
+          select.innerHTML = '<option value="">اختر الرتبة</option>';
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const option = new Option(data.name, doc.id);
+            select.add(option);
+          });
+        } catch (error) {
+          console.error("Error loading roles:", error);
+          showNotification("حدث خطأ أثناء تحميل الرتب", "error");
+        }
+      }
+
+      // Function to initialize reference data
+      async function initializeReferenceData(excelData) {
+        if (!excelData || !Array.isArray(excelData)) {
+          console.log("No Excel data provided for reference initialization");
+          return;
+        }
+
+        try {
+          // Extract unique values from Excel data
+          const subjects = [
+            ...new Set(excelData.map((row) => row["المادة"]).filter(Boolean)),
+          ].map((name) => ({ name }));
+          const roles = [
+            ...new Set(excelData.map((row) => row["الرتبة"]).filter(Boolean)),
+          ].map((name) => ({ name }));
+
+          console.log("Extracted reference data:", { subjects, roles });
+
+          // Initialize subjects
+          for (const subject of subjects) {
+            const snapshot = await subjectsRef
+              .where("name", "==", subject.name)
+              .get();
+            if (snapshot.empty) {
+              await subjectsRef.add(subject);
+              console.log(`Added new subject: ${subject.name}`);
+            }
+          }
+
+          // Initialize roles
+          for (const role of roles) {
+            const snapshot = await rolesRef
+              .where("name", "==", role.name)
+              .get();
+            if (snapshot.empty) {
+              await rolesRef.add(role);
+              console.log(`Added new role: ${role.name}`);
+            }
+          }
+
+          console.log(
+            "Reference data initialized successfully from Excel data"
+          );
+        } catch (error) {
+          console.error("Error initializing reference data:", error);
+          showNotification("حدث خطأ أثناء تهيئة البيانات المرجعية", "error");
+        }
+      }
+    </script>
     <!-- Global Database Module -->
-    <script src="../js/database.js"></script>
+    <!-- <script src="../js/database.js"></script> -->
   </head>
   <body>
     <div class="container">
@@ -176,6 +305,39 @@
                 </div>
               </div>
 
+              <!-- Preview Section -->
+              <div
+                class="preview-section"
+                id="previewSection"
+                style="display: none"
+              >
+                <div class="card">
+                  <div class="card-header">
+                    <h2>معاينة البيانات</h2>
+                  </div>
+                  <div class="card-body">
+                    <div class="preview-controls">
+                      <span class="record-count"
+                        >عدد السجلات: <span id="recordCount">0</span></span
+                      >
+                      <div class="preview-buttons">
+                        <button id="cancelBtn" class="btn-secondary">
+                          <i class="fas fa-times"></i> إلغاء
+                        </button>
+                        <button id="uploadBtn" class="btn-primary">
+                          <i class="fas fa-upload"></i> استيراد البيانات
+                        </button>
+                      </div>
+                    </div>
+                    <div class="preview-table-wrapper">
+                      <table id="previewTable" class="preview-table">
+                        <!-- Table content will be dynamically added here -->
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Teachers Table -->
               <div class="table-container">
                 <table id="teachersTable" class="data-table">
@@ -214,39 +376,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Preview Section -->
-          <div
-            class="preview-section"
-            id="previewSection"
-            style="display: none"
-          >
-            <div class="card">
-              <div class="card-header">
-                <h2>معاينة البيانات</h2>
-              </div>
-              <div class="card-body">
-                <div class="preview-controls">
-                  <span class="record-count"
-                    >عدد السجلات: <span id="recordCount">0</span></span
-                  >
-                  <div class="preview-buttons">
-                    <button id="cancelBtn" class="btn-secondary">
-                      <i class="fas fa-times"></i> إلغاء
-                    </button>
-                    <button id="uploadBtn" class="btn-primary">
-                      <i class="fas fa-upload"></i> استيراد البيانات
-                    </button>
-                  </div>
-                </div>
-                <div class="preview-table-wrapper">
-                  <table id="previewTable" class="preview-table">
-                    <!-- Table content will be dynamically added here -->
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </main>
     </div>
@@ -259,54 +388,94 @@
           <span class="close">&times;</span>
         </div>
         <form id="teacherForm">
-          <input type="hidden" id="teacherId" />
-          <div class="form-group">
-            <label for="teacherName">اسم المعلم</label>
-            <input
-              type="text"
-              id="teacherName"
-              required
-              placeholder="أدخل اسم المعلم"
-            />
-          </div>
-          <div class="form-group">
-            <label for="teacherSubject">المادة</label>
-            <select id="teacherSubject" required>
-              <option value="">اختر المادة</option>
-              <!-- Options will be populated dynamically -->
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="teacherRole">الرتبة</label>
-            <select id="teacherRole" required>
-              <option value="">اختر الرتبة</option>
-              <!-- Options will be populated dynamically -->
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="teacherStatus">الحالة</label>
-            <select id="teacherStatus" required>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="teacherPhone">رقم الهاتف</label>
-            <input type="tel" id="teacherPhone" placeholder="أدخل رقم الهاتف" />
-          </div>
-          <div class="form-group">
-            <label for="teacherEmail">البريد الإلكتروني</label>
-            <input
-              type="email"
-              id="teacherEmail"
-              placeholder="أدخل البريد الإلكتروني"
-            />
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="registration_id" class="required-field"
+                  >الرمز الوظيفي</label
+                >
+                <input
+                  type="text"
+                  id="registration_id"
+                  required
+                  placeholder="أدخل الرمز الوظيفي"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="first_name" class="required-field"
+                  >الاسم الأول</label
+                >
+                <input
+                  type="text"
+                  id="first_name"
+                  required
+                  placeholder="أدخل الاسم الأول"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="last_name" class="required-field">اللقب</label>
+                <input
+                  type="text"
+                  id="last_name"
+                  required
+                  placeholder="أدخل اللقب"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="birth_date">تاريخ الازدياد</label>
+                <input type="date" id="birth_date" />
+              </div>
+
+              <div class="form-group">
+                <label for="teacherSubject" class="required-field"
+                  >المادة</label
+                >
+                <select id="teacherSubject" required>
+                  <option value="">اختر المادة</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="teacherRole" class="required-field">الرتبة</label>
+                <select id="teacherRole" required>
+                  <option value="">اختر الرتبة</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="level">الدرجة</label>
+                <input type="text" id="level" placeholder="أدخل الدرجة" />
+              </div>
+
+              <div class="form-group">
+                <label for="start_date">تاريخ الترسيم</label>
+                <input type="date" id="start_date" />
+              </div>
+
+              <div class="form-group full-width">
+                <div class="status-group">
+                  <span class="status-label">الحالة:</span>
+                  <label class="status-switch">
+                    <input type="checkbox" id="teacherStatus" checked />
+                    <span class="status-slider"></span>
+                  </label>
+                  <span id="statusText" style="margin-right: 10px">نشط</span>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="modal-footer">
-            <button type="button" id="cancelModalBtn" class="btn-secondary">
+            <button type="button" id="cancelModalBtn" class="btn btn-secondary">
+              <i class="fas fa-times"></i>
               إلغاء
             </button>
-            <button type="submit" class="btn-primary">حفظ</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i>
+              حفظ
+            </button>
           </div>
         </form>
       </div>
@@ -324,8 +493,962 @@
       <i class="fas fa-file-export"></i>
     </button>
 
+    <!-- Teacher Profile Modal -->
+    <div id="teacherProfileModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>بيانات المعلم</h2>
+          <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="profile-header">
+            <div class="teacher-avatar-large">
+              <i class="fas fa-user-circle"></i>
+            </div>
+            <div class="teacher-status">
+              <span class="status-badge" id="profileStatus"></span>
+            </div>
+          </div>
+          <div class="profile-info">
+            <div class="info-group">
+              <label>الرمز الوظيفي:</label>
+              <span id="profileRegistrationId"></span>
+            </div>
+            <div class="info-group">
+              <label>الاسم الكامل:</label>
+              <span id="profileFullName"></span>
+            </div>
+            <div class="info-group">
+              <label>تاريخ الازدياد:</label>
+              <span id="profileBirthDate"></span>
+            </div>
+            <div class="info-group">
+              <label>المادة:</label>
+              <span id="profileSubject"></span>
+            </div>
+            <div class="info-group">
+              <label>الرتبة:</label>
+              <span id="profileRole"></span>
+            </div>
+            <div class="info-group">
+              <label>الدرجة:</label>
+              <span id="profileLevel"></span>
+            </div>
+            <div class="info-group">
+              <label>تاريخ الترسيم:</label>
+              <span id="profileStartDate"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Scripts -->
-    <script src="../js/utils.js"></script>
+    <!-- <script src="../js/utils.js"></script> -->
     <script src="../js/teachers.js"></script>
+    <script>
+      // Function to fetch and display teacher data
+      async function fetchAndDisplayTeachers() {
+        try {
+          console.log("🔄 Starting to fetch teachers data...");
+
+          // Get the teachers collection
+          const teachersRef = db.collection("teachers");
+          console.log("📁 Collection reference:", teachersRef.path);
+
+          // First, fetch all subjects and roles for reference
+          const [subjectsSnapshot, rolesSnapshot] = await Promise.all([
+            subjectsRef.get(),
+            rolesRef.get(),
+          ]);
+
+          // Create maps for quick lookups
+          const subjectsMap = new Map();
+          const rolesMap = new Map();
+
+          subjectsSnapshot.forEach((doc) => {
+            subjectsMap.set(doc.id, doc.data().name);
+          });
+
+          rolesSnapshot.forEach((doc) => {
+            rolesMap.set(doc.id, doc.data().name);
+          });
+
+          const snapshot = await teachersRef.get();
+          console.log(`📊 Total documents found: ${snapshot.size}`);
+
+          if (snapshot.empty) {
+            console.log("❌ No teachers found in database");
+            updateStats(0, 0, 0);
+            clearTable();
+            return;
+          }
+
+          // Process teachers data with detailed logging
+          const teachers = [];
+          let activeCount = 0;
+          const subjectsSet = new Set();
+
+          console.group("👥 Teachers Data (Detailed):");
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+
+            // Extract subject and role IDs from references
+            const subjectId = data.subject_ref?.path?.split("/").pop() || "";
+            const roleId = data.role_ref?.path?.split("/").pop() || "";
+
+            // Get the actual names from our maps
+            const subjectName = subjectsMap.get(subjectId) || "N/A";
+            const roleName = rolesMap.get(roleId) || "N/A";
+
+            if (subjectName !== "N/A") {
+              subjectsSet.add(subjectName);
+            }
+
+            const teacherData = {
+              id: doc.id,
+              registration_id: data.registration_id || doc.id,
+              first_name: data.first_name || "",
+              last_name: data.last_name || "",
+              birth_date: data.birth_date || "",
+              role: roleName,
+              subject: subjectName,
+              level: data.level || "",
+              start_date: data.start_date || "",
+              isActive: data.isActive ?? true,
+            };
+
+            teachers.push(teacherData);
+            if (teacherData.isActive) activeCount++;
+          });
+          console.groupEnd();
+
+          // Log summary statistics
+          console.group("📈 Summary Statistics");
+          console.table({
+            "Total Teachers": teachers.length,
+            "Active Teachers": activeCount,
+            "Total Subjects": subjectsSet.size,
+            "Subject List": Array.from(subjectsSet).join(", "),
+          });
+          console.groupEnd();
+
+          // Update stats
+          updateStats(teachers.length, activeCount, subjectsSet.size);
+
+          // Update subject filter with actual subject names
+          updateSubjectFilter(Array.from(subjectsSet));
+
+          // Update table
+          const tableBody = document.getElementById("teachersTableBody");
+          if (!tableBody) {
+            console.error("❌ Teachers table body not found");
+            return;
+          }
+
+          // Build table HTML
+          let tableHTML =
+            teachers.length === 0
+              ? '<tr><td colspan="10" class="text-center">لا توجد بيانات</td></tr>'
+              : teachers
+                  .map(
+                    (teacher) => `
+              <tr>
+                <td>
+                  <div class="teacher-avatar">
+                    ${
+                      teacher.photoUrl
+                        ? `<img src="${teacher.photoUrl}" alt="${teacher.first_name}">`
+                        : '<i class="fas fa-user-circle"></i>'
+                    }
+                  </div>
+                </td>
+                <td>${teacher.registration_id}</td>
+                <td>${teacher.last_name}</td>
+                <td>${teacher.first_name}</td>
+                <td>${teacher.birth_date}</td>
+                <td>${teacher.role}</td>
+                <td>${teacher.subject}</td>
+                <td>${teacher.level}</td>
+                <td>${teacher.start_date}</td>
+                <td class="actions">
+                  <button onclick="viewTeacher('${
+                    teacher.id
+                  }')" class="action-btn view" title="عرض">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button onclick="editTeacher('${
+                    teacher.id
+                  }')" class="action-btn edit" title="تعديل">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button onclick="deleteTeacher('${
+                    teacher.id
+                  }')" class="action-btn delete" title="حذف">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            `
+                  )
+                  .join("");
+
+          tableBody.innerHTML = tableHTML;
+          console.log("✅ Teacher data loaded successfully!");
+        } catch (error) {
+          console.error("❌ Error fetching teacher data:", error);
+          console.error("Error details:", {
+            message: error.message,
+            stack: error.stack,
+            code: error.code,
+          });
+          showNotification("حدث خطأ أثناء تحميل بيانات المعلمين", "error");
+        }
+      }
+
+      // Function to update statistics
+      function updateStats(total, active, subjects) {
+        document.getElementById("totalTeachers").textContent = total;
+        document.getElementById("activeTeachers").textContent = active;
+        document.getElementById("totalSubjects").textContent = subjects;
+      }
+
+      // Function to update subject filter
+      function updateSubjectFilter(subjects) {
+        const subjectFilter = document.getElementById("subjectFilter");
+        subjectFilter.innerHTML = '<option value="">جميع المواد</option>';
+
+        subjects.sort().forEach((subject) => {
+          const option = document.createElement("option");
+          option.value = subject;
+          option.textContent = subject;
+          subjectFilter.appendChild(option);
+        });
+      }
+
+      // Function to clear the table
+      function clearTable() {
+        const tableBody = document.getElementById("teachersTableBody");
+        if (tableBody) {
+          tableBody.innerHTML =
+            '<tr><td colspan="10" class="no-data">لا توجد بيانات</td></tr>';
+        }
+      }
+
+      // Function to show notification
+      function showNotification(message, type = "info") {
+        const notification = document.createElement("div");
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+
+        const container = document.querySelector(".main-content");
+        container.appendChild(notification);
+
+        setTimeout(() => {
+          notification.remove();
+        }, 3000);
+      }
+
+      // Load data when page loads
+      document.addEventListener("DOMContentLoaded", fetchAndDisplayTeachers);
+
+      // Search functionality
+      document.getElementById("searchInput").addEventListener("input", (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll("#teachersTableBody tr");
+
+        rows.forEach((row) => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(searchTerm) ? "" : "none";
+        });
+      });
+
+      // Filter by subject
+      document
+        .getElementById("subjectFilter")
+        .addEventListener("change", (e) => {
+          const subject = e.target.value.toLowerCase();
+          const rows = document.querySelectorAll("#teachersTableBody tr");
+
+          rows.forEach((row) => {
+            if (!subject) {
+              row.style.display = "";
+              return;
+            }
+
+            const subjectCell = row.children[6].textContent.toLowerCase();
+            row.style.display = subjectCell === subject ? "" : "none";
+          });
+        });
+
+      // Filter by status
+      document
+        .getElementById("statusFilter")
+        .addEventListener("change", (e) => {
+          const status = e.target.value;
+          const rows = document.querySelectorAll("#teachersTableBody tr");
+
+          rows.forEach((row) => {
+            if (!status) {
+              row.style.display = "";
+              return;
+            }
+
+            const isActive = row
+              .querySelector(".status-badge")
+              ?.classList.contains("active");
+            row.style.display =
+              (status === "active" && isActive) ||
+              (status === "inactive" && !isActive)
+                ? ""
+                : "none";
+          });
+        });
+
+      // CRUD Operations
+      async function createTeacher(teacherData) {
+        try {
+          // Validate required fields
+          if (
+            !teacherData.registration_id ||
+            !teacherData.first_name ||
+            !teacherData.last_name
+          ) {
+            throw new Error("الرجاء ملء جميع الحقول المطلوبة");
+          }
+
+          // Check if registration_id already exists
+          const existingDoc = await teachersRef
+            .where("registration_id", "==", teacherData.registration_id)
+            .get();
+
+          if (!existingDoc.empty) {
+            throw new Error("الرمز الوظيفي موجود مسبقاً");
+          }
+
+          // Add timestamps
+          const docData = {
+            ...teacherData,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          };
+
+          const docRef = await teachersRef.add(docData);
+          console.log("✅ Teacher created successfully with ID:", docRef.id);
+          return docRef.id;
+        } catch (error) {
+          console.error("❌ Error creating teacher:", error);
+          throw error;
+        }
+      }
+
+      async function updateTeacher(teacherId, updateData) {
+        try {
+          // Validate teacher existence
+          const teacherDoc = await teachersRef.doc(teacherId).get();
+          if (!teacherDoc.exists) {
+            throw new Error("المعلم غير موجود");
+          }
+
+          // Check if registration_id is being changed and if it already exists
+          if (
+            updateData.registration_id !== teacherDoc.data().registration_id
+          ) {
+            const existingDoc = await teachersRef
+              .where("registration_id", "==", updateData.registration_id)
+              .get();
+
+            if (!existingDoc.empty) {
+              throw new Error("الرمز الوظيفي موجود مسبقاً");
+            }
+          }
+
+          // Add updated timestamp
+          const docData = {
+            ...updateData,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          };
+
+          await teachersRef.doc(teacherId).update(docData);
+          console.log("✅ Teacher updated successfully:", teacherId);
+        } catch (error) {
+          console.error("❌ Error updating teacher:", error);
+          throw error;
+        }
+      }
+
+      async function deleteTeacher(teacherId) {
+        try {
+          // Show confirmation dialog
+          if (!confirm("هل أنت متأكد من حذف هذا المعلم؟")) {
+            return;
+          }
+
+          // Get teacher data first to show in notification
+          const teacher = await getTeacherById(teacherId);
+
+          // Delete the teacher document
+          await teachersRef.doc(teacherId).delete();
+
+          console.log("✅ Teacher deleted successfully:", teacherId);
+          showNotification(
+            `تم حذف المعلم ${teacher.first_name} ${teacher.last_name} بنجاح`,
+            "success"
+          );
+
+          // Refresh the teachers list
+          fetchAndDisplayTeachers();
+        } catch (error) {
+          console.error("❌ Error deleting teacher:", error);
+          showNotification(error.message, "error");
+        }
+      }
+
+      async function getTeacherById(teacherId) {
+        try {
+          const doc = await teachersRef.doc(teacherId).get();
+          if (!doc.exists) {
+            throw new Error("المعلم غير موجود");
+          }
+
+          const data = doc.data();
+
+          // Get subject and role names
+          let subjectName = "N/A";
+          let roleName = "N/A";
+
+          if (data.subject_ref) {
+            const subjectDoc = await data.subject_ref.get();
+            if (subjectDoc.exists) {
+              subjectName = subjectDoc.data().name;
+            }
+          }
+
+          if (data.role_ref) {
+            const roleDoc = await data.role_ref.get();
+            if (roleDoc.exists) {
+              roleName = roleDoc.data().name;
+            }
+          }
+
+          return {
+            id: doc.id,
+            ...data,
+            subject_name: subjectName,
+            role_name: roleName,
+          };
+        } catch (error) {
+          console.error("❌ Error fetching teacher:", error);
+          showNotification(error.message, "error");
+          throw error;
+        }
+      }
+
+      // Profile View Functions
+      async function viewTeacher(teacherId) {
+        try {
+          const teacher = await getTeacherById(teacherId);
+
+          // Update profile modal with teacher data
+          document.getElementById("profileRegistrationId").textContent =
+            teacher.registration_id;
+          document.getElementById(
+            "profileFullName"
+          ).textContent = `${teacher.first_name} ${teacher.last_name}`;
+          document.getElementById("profileBirthDate").textContent =
+            teacher.birth_date || "غير محدد";
+          document.getElementById("profileSubject").textContent =
+            teacher.subject_name;
+          document.getElementById("profileRole").textContent =
+            teacher.role_name;
+          document.getElementById("profileLevel").textContent =
+            teacher.level || "غير محدد";
+          document.getElementById("profileStartDate").textContent =
+            teacher.start_date || "غير محدد";
+
+          const statusBadge = document.getElementById("profileStatus");
+          statusBadge.textContent = teacher.isActive ? "نشط" : "غير نشط";
+          statusBadge.className = `status-badge ${
+            teacher.isActive ? "active" : "inactive"
+          }`;
+
+          // Show the profile modal
+          const modal = document.getElementById("teacherProfileModal");
+          modal.style.display = "block";
+        } catch (error) {
+          console.error("❌ Error viewing teacher profile:", error);
+          showNotification(error.message, "error");
+        }
+      }
+
+      // Event Listeners
+      document.addEventListener("DOMContentLoaded", function () {
+        // Close modal when clicking the close button or outside the modal
+        const modals = document.querySelectorAll(".modal");
+        const closeButtons = document.querySelectorAll(".modal .close");
+
+        closeButtons.forEach((button) => {
+          button.onclick = function () {
+            button.closest(".modal").style.display = "none";
+          };
+        });
+
+        window.onclick = function (event) {
+          if (event.target.classList.contains("modal")) {
+            event.target.style.display = "none";
+          }
+        };
+
+        // Add teacher form submission
+        const teacherForm = document.getElementById("teacherForm");
+        if (teacherForm) {
+          teacherForm.onsubmit = async function (e) {
+            e.preventDefault();
+
+            try {
+              // Show loading state
+              const submitBtn = this.querySelector('button[type="submit"]');
+              submitBtn.innerHTML =
+                '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+              submitBtn.disabled = true;
+
+              // Get form data
+              const formData = {
+                registration_id: document
+                  .getElementById("registration_id")
+                  .value.trim(),
+                first_name: document.getElementById("first_name").value.trim(),
+                last_name: document.getElementById("last_name").value.trim(),
+                birth_date: document.getElementById("birth_date").value || null,
+                level: document.getElementById("level").value.trim() || null,
+                start_date: document.getElementById("start_date").value || null,
+                isActive: document.getElementById("teacherStatus").checked,
+              };
+
+              // Get subject and role IDs
+              const subjectId = document.getElementById("teacherSubject").value;
+              const roleId = document.getElementById("teacherRole").value;
+
+              // Validate required fields
+              if (
+                !formData.registration_id ||
+                !formData.first_name ||
+                !formData.last_name ||
+                !subjectId ||
+                !roleId
+              ) {
+                throw new Error("الرجاء ملء جميع الحقول المطلوبة");
+              }
+
+              // Add references
+              if (subjectId) {
+                formData.subject_ref = db.doc(`subjects/${subjectId}`);
+              }
+              if (roleId) {
+                formData.role_ref = db.doc(`roles/${roleId}`);
+              }
+
+              const teacherId = this.dataset.teacherId;
+
+              if (teacherId) {
+                // Update existing teacher
+                await updateTeacher(teacherId, formData);
+                showNotification("تم تحديث بيانات المعلم بنجاح", "success");
+              } else {
+                // Create new teacher
+                await createTeacher(formData);
+                showNotification("تم إضافة المعلم بنجاح", "success");
+              }
+
+              // Reset form and close modal
+              this.reset();
+              document.getElementById("statusText").textContent = "نشط"; // Reset status text
+              document.getElementById("teacherStatus").checked = true; // Reset status toggle
+              delete this.dataset.teacherId;
+              document.getElementById("teacherModal").style.display = "none";
+
+              // Refresh the table
+              await fetchAndDisplayTeachers();
+            } catch (error) {
+              console.error("Form submission error:", error);
+              showNotification(error.message, "error");
+            } finally {
+              // Reset button state
+              const submitBtn = this.querySelector('button[type="submit"]');
+              submitBtn.innerHTML = '<i class="fas fa-save"></i> حفظ';
+              submitBtn.disabled = false;
+            }
+          };
+        }
+      });
+
+      // Add Teacher Button Click Handler
+      document.getElementById("addTeacherBtn").onclick = function () {
+        // Reset form and show modal
+        const form = document.getElementById("teacherForm");
+        form.reset();
+        delete form.dataset.teacherId;
+        document.getElementById("modalTitle").textContent = "إضافة معلم جديد";
+        document.getElementById("teacherModal").style.display = "block";
+      };
+
+      // Load subjects and roles when page loads
+      document.addEventListener("DOMContentLoaded", async function () {
+        try {
+          // Load subjects
+          const subjectsSnapshot = await subjectsRef.get();
+          const subjectSelect = document.getElementById("teacherSubject");
+          subjectSelect.innerHTML = '<option value="">اختر المادة</option>';
+
+          subjectsSnapshot.forEach((doc) => {
+            const option = document.createElement("option");
+            option.value = doc.id;
+            option.textContent = doc.data().name;
+            subjectSelect.appendChild(option);
+          });
+
+          // Load roles
+          const rolesSnapshot = await rolesRef.get();
+          const roleSelect = document.getElementById("teacherRole");
+          roleSelect.innerHTML = '<option value="">اختر الرتبة</option>';
+
+          rolesSnapshot.forEach((doc) => {
+            const option = document.createElement("option");
+            option.value = doc.id;
+            option.textContent = doc.data().name;
+            roleSelect.appendChild(option);
+          });
+        } catch (error) {
+          console.error("Error loading form data:", error);
+          showNotification("حدث خطأ أثناء تحميل البيانات", "error");
+        }
+      });
+
+      // Enhanced edit function
+      async function editTeacher(teacherId) {
+        try {
+          const teacher = await getTeacherById(teacherId);
+
+          // Populate the form
+          document.getElementById("registration_id").value =
+            teacher.registration_id;
+          document.getElementById("first_name").value = teacher.first_name;
+          document.getElementById("last_name").value = teacher.last_name;
+          document.getElementById("birth_date").value =
+            teacher.birth_date || "";
+          document.getElementById("level").value = teacher.level || "";
+          document.getElementById("start_date").value =
+            teacher.start_date || "";
+
+          // Handle subject and role references
+          if (teacher.subject_ref) {
+            const subjectId = teacher.subject_ref.path.split("/").pop();
+            document.getElementById("teacherSubject").value = subjectId;
+          }
+
+          if (teacher.role_ref) {
+            const roleId = teacher.role_ref.path.split("/").pop();
+            document.getElementById("teacherRole").value = roleId;
+          }
+
+          // Set status
+          const statusCheckbox = document.getElementById("teacherStatus");
+          statusCheckbox.checked = teacher.isActive;
+          document.getElementById("statusText").textContent = teacher.isActive
+            ? "نشط"
+            : "غير نشط";
+
+          // Update form state
+          document.getElementById("teacherForm").dataset.teacherId = teacherId;
+          document.getElementById("modalTitle").textContent =
+            "تعديل بيانات المعلم";
+
+          // Show modal
+          document.getElementById("teacherModal").style.display = "block";
+        } catch (error) {
+          console.error("Error loading teacher data:", error);
+          showNotification(error.message, "error");
+        }
+      }
+
+      // Status toggle handler
+      document
+        .getElementById("teacherStatus")
+        .addEventListener("change", function () {
+          document.getElementById("statusText").textContent = this.checked
+            ? "نشط"
+            : "غير نشط";
+        });
+    </script>
+
+    <!-- Add this CSS in the head section -->
+    <style>
+      .teacher-avatar-large {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background-color: #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+      }
+
+      .teacher-avatar-large i {
+        font-size: 60px;
+        color: #666;
+      }
+
+      .profile-header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .profile-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .info-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .info-group label {
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: #666;
+      }
+
+      .info-group span {
+        font-size: 1.1em;
+      }
+
+      .teacher-status {
+        margin-top: 10px;
+      }
+
+      .status-badge {
+        padding: 5px 15px;
+        border-radius: 15px;
+        font-size: 0.9em;
+      }
+
+      .status-badge.active {
+        background-color: #4caf50;
+        color: white;
+      }
+
+      .status-badge.inactive {
+        background-color: #f44336;
+        color: white;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+      }
+
+      .action-btn {
+        padding: 6px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: none;
+      }
+
+      .action-btn:hover {
+        transform: scale(1.1);
+      }
+
+      .action-btn.view {
+        color: #2196f3;
+      }
+
+      .action-btn.edit {
+        color: #4caf50;
+      }
+
+      .action-btn.delete {
+        color: #f44336;
+      }
+
+      .action-btn:hover.view {
+        background-color: rgba(33, 150, 243, 0.1);
+      }
+
+      .action-btn:hover.edit {
+        background-color: rgba(76, 175, 80, 0.1);
+      }
+
+      .action-btn:hover.delete {
+        background-color: rgba(244, 67, 54, 0.1);
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus {
+        border-color: #2196f3;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+      }
+
+      .form-group input:hover,
+      .form-group select:hover {
+        border-color: #90caf9;
+      }
+
+      .required-field::after {
+        content: "*";
+        color: #f44336;
+        margin-right: 4px;
+      }
+
+      .modal-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0 0 8px 8px;
+      }
+
+      .btn {
+        padding: 0.6rem 1.2rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .btn i {
+        font-size: 1rem;
+      }
+
+      .btn-primary {
+        background-color: #2196f3;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background-color: #1976d2;
+      }
+
+      .btn-secondary {
+        background-color: #e0e0e0;
+        color: #333;
+      }
+
+      .btn-secondary:hover {
+        background-color: #bdbdbd;
+      }
+
+      .close {
+        font-size: 1.5rem;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
+
+      .close:hover {
+        background-color: #f5f5f5;
+        color: #333;
+      }
+
+      /* Status toggle switch */
+      .status-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 30px;
+      }
+
+      .status-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .status-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.4s;
+        border-radius: 34px;
+      }
+
+      .status-slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+
+      input:checked + .status-slider {
+        background-color: #4caf50;
+      }
+
+      input:focus + .status-slider {
+        box-shadow: 0 0 1px #4caf50;
+      }
+
+      input:checked + .status-slider:before {
+        transform: translateX(30px);
+      }
+
+      .status-label {
+        margin-right: 10px;
+        font-weight: 600;
+      }
+
+      .status-group {
+        display: flex;
+        align-items: center;
+      }
+    </style>
   </body>
 </html>

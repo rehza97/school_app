@@ -1,49 +1,21 @@
-// DOM Elements
-const studentFullName = document.getElementById("studentFullName");
-const studentIdElement = document.getElementById("studentId");
-const studentClassElement = document.getElementById("studentClass");
-const studentBirthDateElement = document.getElementById("studentBirthDate");
-const studentGenderElement = document.getElementById("studentGender");
-const attendanceRateElement = document.getElementById("attendanceRate");
-const absenceDaysElement = document.getElementById("absenceDays");
-const totalDaysElement = document.getElementById("totalDays");
-const themeToggle = document.getElementById("themeToggle");
-const notificationContainer = document.getElementById("notificationContainer");
-const tabButtons = document.querySelectorAll(".tab-btn");
-const tabPanels = document.querySelectorAll(".tab-panel");
-const attendanceTableBody = document.getElementById("attendanceTableBody");
-const notesContainer = document.getElementById("notesContainer");
-const monthFilter = document.getElementById("monthFilter");
-const editStudentBtn = document.getElementById("editStudentBtn");
-const printProfileBtn = document.getElementById("printProfileBtn");
-const addNoteBtn = document.getElementById("addNoteBtn");
-const editContactBtn = document.getElementById("editContactBtn");
+// Initialize Firebase
+console.log("Starting student-profile.js...");
 
-// Student Profile Modal
-const noteModal = document.getElementById("noteModal");
-const noteModalCloseBtn = document.querySelector("#noteModal .close-btn");
-const noteForm = document.getElementById("noteForm");
-const cancelNoteBtn = document.getElementById("cancelNoteBtn");
+// Ensure Firebase is initialized
+if (!firebase) {
+  console.error("Firebase is not initialized!");
+} else {
+  console.log("Firebase is available");
+}
 
-// Contact Info Modal
-const contactModal = document.getElementById("contactModal");
-const contactModalCloseBtn = document.querySelector("#contactModal .close-btn");
-const contactForm = document.getElementById("contactForm");
-const cancelContactBtn = document.getElementById("cancelContactBtn");
+// Initialize Firestore
+const db = firebase.firestore();
+console.log("Firestore initialized");
 
-// Contact Info Elements
-const studentAddressElement = document.getElementById("studentAddress");
-const studentPhoneElement = document.getElementById("studentPhone");
-const studentEmailElement = document.getElementById("studentEmail");
-const parentNameElement = document.getElementById("parentName");
-const parentRelationElement = document.getElementById("parentRelation");
-const parentPhoneElement = document.getElementById("parentPhone");
-const parentEmailElement = document.getElementById("parentEmail");
-const parentAddressElement = document.getElementById("parentAddress");
-
-// Student ID from URL
+// Get student ID from URL parameters
 const urlParams = new URLSearchParams(window.location.search);
 const studentId = urlParams.get("id");
+console.log("Student ID from URL:", studentId);
 
 // Student data
 let studentData = null;
@@ -56,11 +28,62 @@ let notesData = [];
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
+  // Initialize DOM elements after the document is loaded
+  initializeDOMElements();
   initializeTheme();
   loadStudentData();
   setupTabNavigation();
   setupEventListeners();
 });
+
+// Initialize DOM elements
+function initializeDOMElements() {
+  window.studentFullName = document.getElementById("studentFullName");
+  window.studentIdElement = document.getElementById("studentId");
+  window.studentClass = document.getElementById("studentClass");
+  window.studentBirthDate = document.getElementById("studentBirthDate");
+  window.studentGender = document.getElementById("studentGender");
+  window.attendanceRate = document.getElementById("attendanceRate");
+  window.absenceDays = document.getElementById("absenceDays");
+  window.totalDays = document.getElementById("totalDays");
+  window.themeToggle = document.getElementById("themeToggle");
+  window.notificationContainer = document.getElementById(
+    "notificationContainer"
+  );
+  window.tabButtons = document.querySelectorAll(".tab-btn");
+  window.tabPanels = document.querySelectorAll(".tab-panel");
+  window.attendanceTableBody = document.getElementById("attendanceTableBody");
+  window.notesContainer = document.getElementById("notesContainer");
+  window.monthFilter = document.getElementById("monthFilter");
+  window.editStudentBtn = document.getElementById("editStudentBtn");
+  window.printProfileBtn = document.getElementById("printProfileBtn");
+  window.addNoteBtn = document.getElementById("addNoteBtn");
+  window.editContactBtn = document.getElementById("editContactBtn");
+
+  // Student Profile Modal
+  window.noteModal = document.getElementById("noteModal");
+  window.noteModalCloseBtn = document.querySelector("#noteModal .close-btn");
+  window.noteForm = document.getElementById("noteForm");
+  window.cancelNoteBtn = document.getElementById("cancelNoteBtn");
+
+  // Contact Info Modal
+  window.contactModal = document.getElementById("contactModal");
+  window.contactModalCloseBtn = document.querySelector(
+    "#contactModal .close-btn"
+  );
+  window.contactForm = document.getElementById("contactForm");
+  window.cancelContactBtn = document.getElementById("cancelContactBtn");
+
+  // Contact Info Elements
+  window.studentAddress = document.getElementById("studentAddress");
+  window.studentPhone = document.getElementById("studentPhone");
+  window.studentEmail = document.getElementById("studentEmail");
+  window.parentName = document.getElementById("parentName");
+  window.parentRelation = document.getElementById("parentRelation");
+  window.parentPhone = document.getElementById("parentPhone");
+  window.parentEmail = document.getElementById("parentEmail");
+  window.parentAddress = document.getElementById("parentAddress");
+}
 
 // Initialize theme from localStorage
 function initializeTheme() {
@@ -129,85 +152,127 @@ function showNotification(message, type = "info") {
 }
 
 // Load student data
-function loadStudentData() {
-  if (!studentId) {
-    showNotification("لم يتم تحديد هوية الطالب", "error");
-    setTimeout(() => {
-      window.location.href = "students.html";
-    }, 2000);
-    return;
-  }
-
+async function loadStudentData() {
+  console.log("Loading student data for ID:", studentId);
   try {
-    // Get student from database
-    studentData = db.students.getById(studentId);
+    console.log("Attempting to fetch student document...");
+    const studentDoc = await db.collection("students").doc(studentId).get();
+    console.log("Fetch completed");
 
-    if (!studentData) {
-      showNotification("لم يتم العثور على الطالب", "error");
-      setTimeout(() => {
-        window.location.href = "students.html";
-      }, 2000);
+    if (!studentDoc.exists) {
+      console.log("No student found with ID:", studentId);
+      showNotification("الطالب غير موجود", "error");
       return;
     }
 
-    // Update UI with student data
-    updateStudentProfile();
-    loadAttendanceData();
-    loadNotesData();
-    loadContactInfo();
+    console.log("Student document exists, getting data...");
+    const student = studentDoc.data();
+    console.log("Raw student data:", student);
+
+    // Store student data globally
+    studentData = student;
+
+    // Update UI elements if they exist
+    if (studentFullName)
+      studentFullName.textContent = `${student.first_name} ${student.last_name}`;
+    if (studentIdElement)
+      studentIdElement.textContent = student.registration_id || studentId;
+    if (studentGender) studentGender.textContent = student.gender || "غير محدد";
+    if (studentBirthDate)
+      studentBirthDate.textContent =
+        formatDate(student.birth_date) || "غير محدد";
+
+    // Load class info
+    let classInfo = [];
+    if (student.grade_ref) {
+      try {
+        const gradeDoc = await student.grade_ref.get();
+        if (gradeDoc.exists) {
+          classInfo.push(gradeDoc.data().name);
+        }
+      } catch (error) {
+        console.error("Error loading grade info:", error);
+      }
+    }
+    if (student.specialty_ref) {
+      try {
+        const specialtyDoc = await student.specialty_ref.get();
+        if (specialtyDoc.exists) {
+          classInfo.push(specialtyDoc.data().name);
+        }
+      } catch (error) {
+        console.error("Error loading specialty info:", error);
+      }
+    }
+    if (student.class_ref) {
+      try {
+        const classDoc = await student.class_ref.get();
+        if (classDoc.exists) {
+          classInfo.push(classDoc.data().name);
+        }
+      } catch (error) {
+        console.error("Error loading class info:", error);
+      }
+    }
+    if (studentClass)
+      studentClass.textContent = classInfo.join(" - ") || "غير محدد";
+
+    // Update contact info if elements exist
+    if (studentAddress)
+      studentAddress.textContent = student.address || "غير محدد";
+    if (studentPhone) studentPhone.textContent = student.phone || "غير محدد";
+    if (studentEmail) studentEmail.textContent = student.email || "غير محدد";
+    if (parentName) parentName.textContent = student.parent_name || "غير محدد";
+    if (parentRelation)
+      parentRelation.textContent = student.parent_relation || "غير محدد";
+    if (parentPhone)
+      parentPhone.textContent = student.parent_phone || "غير محدد";
+    if (parentEmail)
+      parentEmail.textContent = student.parent_email || "غير محدد";
+    if (parentAddress)
+      parentAddress.textContent = student.parent_address || "غير محدد";
+
+    // Load attendance stats
+    loadAttendanceStats(studentId);
+
+    // Load notes
+    loadNotes();
   } catch (error) {
     console.error("Error loading student data:", error);
     showNotification("حدث خطأ أثناء تحميل بيانات الطالب", "error");
   }
 }
 
-// Update student profile with data
-function updateStudentProfile() {
-  studentFullName.textContent = `${studentData.firstName} ${studentData.lastName}`;
-  studentIdElement.textContent = studentData.studentId || "-";
-
-  // Get class details
-  const classId = studentData.class;
-  let className = "-";
-
-  if (classId) {
-    const classComponents = getClassComponents(classId);
-    if (classComponents) {
-      className = `${classComponents.level} - ${classComponents.specialty} - ${classComponents.section}`;
-    }
-  }
-
-  studentClassElement.textContent = className;
-
-  // Format birthdate
-  if (studentData.birthDate) {
-    const birthDate = new Date(studentData.birthDate);
-    const formattedDate = birthDate.toLocaleDateString("ar-SA");
-    studentBirthDateElement.textContent = formattedDate;
-  } else {
-    studentBirthDateElement.textContent = "-";
-  }
-
-  studentGenderElement.textContent = studentData.gender || "-";
-
-  // Update attendance stats
-  updateAttendanceStats();
-}
-
-// Parse class ID to get components
-function getClassComponents(classId) {
+// Load attendance statistics
+async function loadAttendanceStats(studentId) {
   try {
-    const [levelId, specialtyId, sectionId] = classId.split("-");
+    const today = new Date();
+    const startOfYear = new Date(today.getFullYear(), 8, 1); // September 1st
 
-    // Get level, specialty, and section names from database
-    const level = db.levels.getById(levelId)?.name || levelId;
-    const specialty = db.specialties.getById(specialtyId)?.name || specialtyId;
-    const section = db.sections.getById(sectionId)?.name || sectionId;
+    const attendanceSnapshot = await db
+      .collection("attendance")
+      .where("student_id", "==", studentId)
+      .where("date", ">=", startOfYear)
+      .get();
 
-    return { level, specialty, section };
+    const total = attendanceSnapshot.size;
+    let present = 0;
+
+    attendanceSnapshot.forEach((doc) => {
+      if (doc.data().status === "present") {
+        present++;
+      }
+    });
+
+    const absent = total - present;
+    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+
+    attendanceRate.textContent = `${rate}%`;
+    absenceDays.textContent = absent;
+    totalDays.textContent = total;
   } catch (error) {
-    console.error("Error parsing class ID:", error);
-    return null;
+    console.error("Error loading attendance stats:", error);
+    showNotification("حدث خطأ أثناء تحميل إحصائيات الحضور", "error");
   }
 }
 
@@ -243,14 +308,15 @@ function setupEventListeners() {
   // Edit student button
   if (editStudentBtn) {
     editStudentBtn.addEventListener("click", () => {
-      // Redirect to students page with edit parameter
       window.location.href = `students.html?edit=${studentId}`;
     });
   }
 
   // Print profile button
   if (printProfileBtn) {
-    printProfileBtn.addEventListener("click", printStudentProfile);
+    printProfileBtn.addEventListener("click", () => {
+      window.print();
+    });
   }
 
   // Add note button
@@ -275,7 +341,30 @@ function setupEventListeners() {
 
   // Note form submission
   if (noteForm) {
-    noteForm.addEventListener("submit", handleNoteSubmit);
+    noteForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      try {
+        const noteData = {
+          student_id: studentId,
+          date: e.target.noteDate.value,
+          type: e.target.noteType.value,
+          content: e.target.noteContent.value,
+          created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+
+        await db.collection("student_notes").add(noteData);
+        showNotification("تم إضافة الملاحظة بنجاح", "success");
+
+        // Reset form and reload notes
+        e.target.reset();
+        document.getElementById("noteModal").style.display = "none";
+        loadNotes();
+      } catch (error) {
+        console.error("Error adding note:", error);
+        showNotification("حدث خطأ أثناء إضافة الملاحظة", "error");
+      }
+    });
   }
 
   // Contact modal close button
@@ -294,32 +383,22 @@ function setupEventListeners() {
   }
 }
 
-// Load attendance data for the student
-function loadAttendanceData() {
-  try {
-    // Get real attendance data from database
-    attendanceData = db.attendance.getByStudent(studentId);
+// Filter attendance data by month
+function filterAttendanceByMonth() {
+  const selectedMonth = monthFilter.value;
 
-    if (!attendanceData || attendanceData.length === 0) {
-      // If no data exists, use empty array
-      attendanceData = [];
-      displayAttendanceData([]);
-      updateAttendanceStats();
-      return;
-    }
-
-    // Sort by date (most recent first)
-    attendanceData.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Display attendance data
+  if (!selectedMonth) {
+    // Show all attendance records
     displayAttendanceData(attendanceData);
-
-    // Update attendance stats
-    updateAttendanceStats();
-  } catch (error) {
-    console.error("Error loading attendance data:", error);
-    showNotification("حدث خطأ أثناء تحميل بيانات الحضور", "error");
+    return;
   }
+
+  // Filter records by selected month
+  const filteredData = attendanceData.filter((record) => {
+    return record.date.getMonth() + 1 === parseInt(selectedMonth);
+  });
+
+  displayAttendanceData(filteredData);
 }
 
 // Display attendance data in the table
@@ -372,203 +451,97 @@ function displayAttendanceData(data) {
   });
 }
 
-// Filter attendance data by month
-function filterAttendanceByMonth() {
-  const selectedMonth = monthFilter.value;
-
-  if (!selectedMonth) {
-    // Show all attendance records
-    displayAttendanceData(attendanceData);
-    return;
-  }
-
-  // Filter records by selected month
-  const filteredData = attendanceData.filter((record) => {
-    return record.date.getMonth() + 1 === parseInt(selectedMonth);
-  });
-
-  displayAttendanceData(filteredData);
-}
-
-// Update attendance statistics
-function updateAttendanceStats() {
-  try {
-    // Get attendance statistics from database
-    const stats = db.attendance.getStudentStats(studentId);
-
-    const totalDays = stats.total || 0;
-    const absentDays = stats.absent || 0;
-    const presentDays = stats.present || 0;
-    const attendanceRate = stats.presentRate || 0;
-
-    // Update UI elements
-    totalDaysElement.textContent = totalDays;
-    absenceDaysElement.textContent = absentDays;
-    attendanceRateElement.textContent = `${Math.round(attendanceRate)}%`;
-
-    // Animate counting
-    animateCounter(totalDaysElement, totalDays);
-    animateCounter(absenceDaysElement, absentDays);
-    animateCounter(attendanceRateElement, Math.round(attendanceRate), "%");
-  } catch (error) {
-    console.error("Error updating attendance stats:", error);
-
-    // Fallback to calculating from attendance data if database method fails
-    const totalDays = attendanceData.length;
-    const absentDays = attendanceData.filter(
-      (record) => record.status === "absent"
-    ).length;
-    const presentDays = totalDays - absentDays;
-    const attendanceRate =
-      totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
-
-    totalDaysElement.textContent = totalDays;
-    absenceDaysElement.textContent = absentDays;
-    attendanceRateElement.textContent = `${attendanceRate}%`;
-
-    // Animate counting
-    animateCounter(totalDaysElement, totalDays);
-    animateCounter(absenceDaysElement, absentDays);
-    animateCounter(attendanceRateElement, attendanceRate, "%");
-  }
-}
-
-// Animate counter
-function animateCounter(element, targetValue, suffix = "") {
-  if (!element) return;
-
-  let currentValue = 0;
-  const duration = 1000; // 1 second
-  const interval = Math.min(50, duration / targetValue); // Max 20 FPS or fewer steps for small numbers
-  const increment = targetValue / (duration / interval);
-
-  if (targetValue === 0) {
-    element.textContent = `0${suffix}`;
-    return;
-  }
-
-  const timer = setInterval(() => {
-    currentValue += increment;
-    element.textContent = `${Math.floor(currentValue)}${suffix}`;
-
-    if (currentValue >= targetValue) {
-      element.textContent = `${targetValue}${suffix}`;
-      clearInterval(timer);
-    }
-  }, interval);
-}
-
 // Load notes data
-function loadNotesData() {
+async function loadNotes() {
   try {
-    // Mock data - in a real app, this would come from the database
-    notesData = [
-      {
-        id: "note1",
-        date: new Date(2023, 2, 5), // March 5, 2023
-        type: "academic",
-        content: "الطالب متفوق في مادة الرياضيات ويحتاج إلى مزيد من التحدي.",
-        teacher: "أحمد محمد",
-      },
-      {
-        id: "note2",
-        date: new Date(2023, 1, 20), // February 20, 2023
-        type: "behavior",
-        content: "الطالب يتحدث كثيرًا أثناء الحصة ويشتت انتباه زملائه.",
-        teacher: "محمد علي",
-      },
-      {
-        id: "note3",
-        date: new Date(2023, 0, 15), // January 15, 2023
-        type: "achievement",
-        content:
-          "حصل الطالب على المركز الأول في مسابقة الخط العربي على مستوى المدرسة.",
-        teacher: "فاطمة أحمد",
-      },
-    ];
+    const notesSnapshot = await db
+      .collection("student_notes")
+      .where("student_id", "==", studentId)
+      .orderBy("date", "desc")
+      .get();
 
-    // Sort by date (most recent first)
-    notesData.sort((a, b) => b.date - a.date);
+    if (notesSnapshot.empty) {
+      notesContainer.innerHTML = `
+        <div class="empty-notes">
+          <i class="fas fa-sticky-note"></i>
+          <p>لا توجد ملاحظات حتى الآن</p>
+        </div>
+      `;
+      return;
+    }
 
-    // Display notes
-    displayNotes();
+    notesContainer.innerHTML = "";
+    notesSnapshot.forEach((doc) => {
+      const note = doc.data();
+      const noteElement = createNoteElement(note, doc.id);
+      notesContainer.appendChild(noteElement);
+    });
   } catch (error) {
-    console.error("Error loading notes data:", error);
-    showNotification("حدث خطأ أثناء تحميل بيانات الملاحظات", "error");
+    console.error("Error loading notes:", error);
+    showNotification("حدث خطأ أثناء تحميل الملاحظات", "error");
   }
 }
 
-// Display notes
-function displayNotes() {
-  if (!notesContainer) return;
-
-  notesContainer.innerHTML = "";
-
-  if (notesData.length === 0) {
-    notesContainer.innerHTML = `
-      <div class="empty-notes">
-        <i class="fas fa-sticky-note"></i>
-        <p>لا توجد ملاحظات حتى الآن</p>
-      </div>
-    `;
-    return;
-  }
-
-  notesData.forEach((note) => {
-    const noteCard = document.createElement("div");
-    noteCard.className = "note-card";
-
-    // Format date
-    const formattedDate = note.date.toLocaleDateString("ar-SA");
-
-    // Get type translation
-    let typeText = "أخرى";
-    if (note.type === "academic") typeText = "أكاديمية";
-    if (note.type === "behavior") typeText = "سلوكية";
-    if (note.type === "achievement") typeText = "إنجاز";
-
-    noteCard.innerHTML = `
-      <div class="note-header">
-        <span class="note-type ${note.type}">${typeText}</span>
-        <span class="note-date">${formattedDate}</span>
-      </div>
-      <div class="note-content">${note.content}</div>
-      <div class="note-teacher">بواسطة: ${note.teacher}</div>
-    `;
-
-    notesContainer.appendChild(noteCard);
-  });
+function createNoteElement(note, noteId) {
+  const div = document.createElement("div");
+  div.className = "note-card";
+  div.innerHTML = `
+    <div class="note-header">
+      <span class="note-date">${formatDate(note.date)}</span>
+      <span class="note-type ${note.type}">${note.type}</span>
+    </div>
+    <div class="note-content">${note.content}</div>
+    <div class="note-actions">
+      <button onclick="deleteNote('${noteId}')" class="btn-danger">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+  `;
+  return div;
 }
 
-// Load contact information
-function loadContactInfo() {
+// Delete note
+async function deleteNote(noteId) {
+  if (confirm("هل أنت متأكد من حذف هذه الملاحظة؟")) {
+    try {
+      await db.collection("student_notes").doc(noteId).delete();
+      showNotification("تم حذف الملاحظة بنجاح", "success");
+      loadNotes();
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      showNotification("حدث خطأ أثناء حذف الملاحظة", "error");
+    }
+  }
+}
+
+// Handle contact form submission
+contactForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
   try {
-    // In a real app, this would come from the database
-    // For now, use mock data if not available in student data
+    const updates = {
+      address: e.target.studentAddress.value,
+      phone: e.target.studentPhone.value,
+      email: e.target.studentEmail.value,
+      parent_name: e.target.parentName.value,
+      parent_relation: e.target.parentRelation.value,
+      parent_phone: e.target.parentPhone.value,
+      parent_email: e.target.parentEmail.value,
+      parent_address: e.target.parentAddress.value,
+      updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    };
 
-    // Student contact info
-    studentAddressElement.textContent = studentData.address || "غير محدد";
-    studentPhoneElement.textContent = studentData.phone || "غير محدد";
-    studentEmailElement.textContent = studentData.email || "غير محدد";
+    await db.collection("students").doc(studentId).update(updates);
+    showNotification("تم تحديث معلومات الاتصال بنجاح", "success");
 
-    // Parent contact info
-    const parentInfo = studentData.parent || {};
-    parentNameElement.textContent = parentInfo.name || "غير محدد";
-    parentRelationElement.textContent = parentInfo.relation || "غير محدد";
-    parentPhoneElement.textContent = parentInfo.phone || "غير محدد";
-    parentEmailElement.textContent = parentInfo.email || "غير محدد";
-    parentAddressElement.textContent =
-      parentInfo.address || studentData.address || "غير محدد";
+    // Close modal and reload data
+    document.getElementById("contactModal").style.display = "none";
+    loadStudentData();
   } catch (error) {
-    console.error("Error loading contact info:", error);
-    showNotification("حدث خطأ أثناء تحميل معلومات الاتصال", "error");
+    console.error("Error updating contact info:", error);
+    showNotification("حدث خطأ أثناء تحديث معلومات الاتصال", "error");
   }
-}
-
-// Print student profile
-function printStudentProfile() {
-  window.print();
-}
+});
 
 // Open note modal
 function openNoteModal() {
@@ -590,41 +563,6 @@ function closeNoteModal() {
   if (!noteModal) return;
 
   noteModal.style.display = "none";
-}
-
-// Handle note form submission
-function handleNoteSubmit(e) {
-  e.preventDefault();
-
-  const noteDate = document.getElementById("noteDate").value;
-  const noteType = document.getElementById("noteType").value;
-  const noteContent = document.getElementById("noteContent").value;
-
-  if (!noteDate || !noteType || !noteContent) {
-    showNotification("يرجى تعبئة جميع الحقول المطلوبة", "error");
-    return;
-  }
-
-  // Create new note
-  const newNote = {
-    id: `note${Date.now()}`,
-    date: new Date(noteDate),
-    type: noteType,
-    content: noteContent,
-    teacher: "المدير", // In a real app, this would be the logged-in user
-  };
-
-  // Add note to data
-  notesData.unshift(newNote);
-
-  // Update display
-  displayNotes();
-
-  // Close modal
-  closeNoteModal();
-
-  // Show success notification
-  showNotification("تمت إضافة الملاحظة بنجاح", "success");
 }
 
 // Open contact modal
@@ -657,76 +595,9 @@ function closeContactModal() {
   contactModal.style.display = "none";
 }
 
-// Handle contact form submission
-function handleContactSubmit(e) {
-  e.preventDefault();
-
-  // Get form values
-  const studentAddress = document.getElementById("editStudentAddress").value;
-  const studentPhone = document.getElementById("editStudentPhone").value;
-  const studentEmail = document.getElementById("editStudentEmail").value;
-
-  const parentName = document.getElementById("editParentName").value;
-  const parentRelation = document.getElementById("editParentRelation").value;
-  const parentPhone = document.getElementById("editParentPhone").value;
-  const parentEmail = document.getElementById("editParentEmail").value;
-  const parentAddress = document.getElementById("editParentAddress").value;
-
-  // Update student data
-  studentData.address = studentAddress;
-  studentData.phone = studentPhone;
-  studentData.email = studentEmail;
-
-  // Create or update parent info
-  if (!studentData.parent) studentData.parent = {};
-  studentData.parent.name = parentName;
-  studentData.parent.relation = parentRelation;
-  studentData.parent.phone = parentPhone;
-  studentData.parent.email = parentEmail;
-  studentData.parent.address = parentAddress;
-
-  // Update the database
-  db.students.update(studentData);
-
-  // Update display
-  loadContactInfo();
-
-  // Close modal
-  closeContactModal();
-
-  // Show success notification
-  showNotification("تم تحديث معلومات الاتصال بنجاح", "success");
-}
-
-// Utility function to add CSS classes for print media
-function addPrintStyles() {
-  const style = document.createElement("style");
-  style.innerHTML = `
-    @media print {
-      .sidebar, header, .theme-toggle, .btn-primary, .btn-secondary, #notificationContainer, .tabs-nav {
-        display: none !important;
-      }
-      
-      body {
-        background-color: white !important;
-        color: black !important;
-      }
-      
-      .main-content {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-      }
-      
-      .tab-panel {
-        display: block !important;
-        break-inside: avoid;
-      }
-      
-      .dashboard-content {
-        padding: 0 !important;
-      }
-    }
-  `;
-  document.head.appendChild(style);
+// Helper function to format dates
+function formatDate(date) {
+  if (!date) return "";
+  const d = new Date(date);
+  return d.toLocaleDateString("ar-SA");
 }

@@ -16,9 +16,35 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     />
     <!-- Global Database Module -->
-    <script src="../js/database.js"></script>
-    <!-- Database Connector -->
-    <script src="../js/db-connector.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <!-- Firebase Config -->
+    <script>
+      // Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyCq4l4Ppt60zXz_m46HBK6qchu7HBAbNMA",
+        authDomain: "myschool-d8bbe.firebaseapp.com",
+        projectId: "myschool-d8bbe",
+        storageBucket: "myschool-d8bbe.appspot.com",
+        messagingSenderId: "888939871515",
+        appId: "1:888939871515:web:7a7042a5a268fa9d79a7be",
+        measurementId: "G-9SR1L1THQC",
+      };
+
+      // Initialize Firebase with debugging
+      try {
+        console.log("Initializing Firebase...");
+        firebase.initializeApp(firebaseConfig);
+        window.db = firebase.firestore();
+        console.log("Firebase initialized successfully!");
+      } catch (error) {
+        console.error("Error initializing Firebase:", error);
+      }
+    </script>
+    <!-- Application Scripts -->
+    <script src="../js/student-profile.js"></script>
   </head>
   <body>
     <div class="container">

@@ -10,6 +10,54 @@
     />
     <link rel="stylesheet" href="../css/style.css" />
     <link rel="stylesheet" href="../css/students.css" />
+    <style>
+      .reference-data-section {
+        display: flex;
+        gap: 1rem;
+        margin: 1rem 0;
+        flex-wrap: nowrap;
+      }
+
+      .reference-data-section .content-card {
+        flex: 1;
+        min-width: 300px;
+        margin: 0;
+      }
+
+      .reference-data-section .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .reference-data-section .table-wrapper {
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .reference-data-section .data-table {
+        width: 100%;
+        min-width: 250px;
+      }
+
+      @media screen and (max-width: 1200px) {
+        .reference-data-section {
+          flex-wrap: wrap;
+        }
+
+        .reference-data-section .content-card {
+          flex: 1 1 calc(50% - 1rem);
+        }
+      }
+
+      @media screen and (max-width: 768px) {
+        .reference-data-section .content-card {
+          flex: 1 1 100%;
+        }
+      }
+    </style>
     <link
       href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;700&display=swap"
       rel="stylesheet"
@@ -20,8 +68,189 @@
     />
     <!-- Add SheetJS library for Excel parsing -->
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
-    <!-- Global Database Module -->
-    <script src="../js/database.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <!-- Firebase Config -->
+    <script>
+      // Current Firebase config (commented out)
+      /*const firebaseConfig = {
+        apiKey: "AIzaSyDb3WjlUPT4mHBaSp6RlBaj5bRH91WVSOM",
+        projectId: "school-dba13",
+        storageBucket: "school-dba13.firebasestorage.app",
+        appId: "1:680944552420:android:270246e4fcc67b9c25dff1",
+      };*/
+      // Temporary Firebase config
+      const firebaseConfig = {
+        apiKey: "AIzaSyCq4l4Ppt60zXz_m46HbK6qchu7HBAbNMA",
+        authDomain: "myschool-d8bbe.firebaseapp.com",
+        projectId: "myschool-d8bbe",
+        storageBucket: "myschool-d8bbe.firebasestorage.app",
+        messagingSenderId: "888939871515",
+        appId: "1:888939871515:web:7a7042a5a268fa9d79a7be",
+        measurementId: "G-9SR1L1THQC",
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+
+      // Initialize collections
+      const specialtiesRef = db.collection("specialties");
+      const gradesRef = db.collection("grades");
+      const classesRef = db.collection("classes");
+
+      // Function to load specialties
+      async function loadSpecialties() {
+        try {
+          const snapshot = await specialtiesRef.get();
+          const select = document.getElementById("specialty");
+          const filterSelect = document.getElementById("specialtyFilter");
+
+          // Clear existing options except the first one
+          select.innerHTML = '<option value="">اختر التخصص</option>';
+          filterSelect.innerHTML = '<option value="">جميع التخصصات</option>';
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const option = new Option(data.name, doc.id);
+            const filterOption = new Option(data.name, doc.id);
+            select.add(option);
+            filterSelect.add(filterOption);
+          });
+        } catch (error) {
+          console.error("Error loading specialties:", error);
+          showNotification("حدث خطأ أثناء تحميل التخصصات", "error");
+        }
+      }
+
+      // Function to load grades
+      async function loadGrades() {
+        try {
+          const snapshot = await gradesRef.get();
+          const select = document.getElementById("educationLevel");
+          const filterSelect = document.getElementById("educationLevelFilter");
+
+          // Clear existing options except the first one
+          select.innerHTML = '<option value="">اختر المستوى التعليمي</option>';
+          filterSelect.innerHTML = '<option value="">جميع المستويات</option>';
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const option = new Option(data.name, doc.id);
+            const filterOption = new Option(data.name, doc.id);
+            select.add(option);
+            filterSelect.add(filterOption);
+          });
+        } catch (error) {
+          console.error("Error loading grades:", error);
+          showNotification("حدث خطأ أثناء تحميل المستويات التعليمية", "error");
+        }
+      }
+
+      // Function to load classes
+      async function loadClasses() {
+        try {
+          const snapshot = await classesRef.get();
+          const select = document.getElementById("section");
+          const filterSelect = document.getElementById("sectionFilter");
+
+          // Clear existing options except the first one
+          select.innerHTML = '<option value="">اختر القسم</option>';
+          filterSelect.innerHTML = '<option value="">جميع الأقسام</option>';
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const option = new Option(data.name, doc.id);
+            const filterOption = new Option(data.name, doc.id);
+            select.add(option);
+            filterSelect.add(filterOption);
+          });
+        } catch (error) {
+          console.error("Error loading classes:", error);
+          showNotification("حدث خطأ أثناء تحميل الأقسام", "error");
+        }
+      }
+
+      // Function to initialize reference data
+      async function initializeReferenceData(excelData) {
+        if (!excelData || !Array.isArray(excelData)) {
+          console.log("No Excel data provided for reference initialization");
+          return;
+        }
+
+        try {
+          // Extract unique values from Excel data
+          const specialties = [
+            ...new Set(excelData.map((row) => row["الشعبة"]).filter(Boolean)),
+          ].map((name) => ({ name }));
+          const grades = [
+            ...new Set(excelData.map((row) => row["السنة"]).filter(Boolean)),
+          ].map((name) => ({ name }));
+          const classes = [
+            ...new Set(excelData.map((row) => row["القسم"]).filter(Boolean)),
+          ].map((name) => ({ name }));
+
+          console.log("Extracted reference data:", {
+            specialties,
+            grades,
+            classes,
+          });
+
+          // Initialize specialties
+          for (const specialty of specialties) {
+            const snapshot = await specialtiesRef
+              .where("name", "==", specialty.name)
+              .get();
+            if (snapshot.empty) {
+              await specialtiesRef.add(specialty);
+              console.log(`Added new specialty: ${specialty.name}`);
+            }
+          }
+
+          // Initialize grades
+          for (const grade of grades) {
+            const snapshot = await gradesRef
+              .where("name", "==", grade.name)
+              .get();
+            if (snapshot.empty) {
+              await gradesRef.add(grade);
+              console.log(`Added new grade: ${grade.name}`);
+            }
+          }
+
+          // Initialize classes
+          for (const cls of classes) {
+            const snapshot = await classesRef
+              .where("name", "==", cls.name)
+              .get();
+            if (snapshot.empty) {
+              await classesRef.add(cls);
+              console.log(`Added new class: ${cls.name}`);
+            }
+          }
+
+          console.log(
+            "Reference data initialized successfully from Excel data"
+          );
+        } catch (error) {
+          console.error("Error initializing reference data:", error);
+          showNotification("حدث خطأ أثناء تهيئة البيانات المرجعية", "error");
+        }
+      }
+
+      // Check Firebase connection
+      async function checkFirebaseConnection() {
+        try {
+          await db.collection("students").get();
+          return true;
+        } catch (error) {
+          console.error("Firebase connection error:", error);
+          return false;
+        }
+      }
+    </script>
   </head>
   <body>
     <div class="container">
@@ -102,6 +331,78 @@
               <div class="stat-info">
                 <h3>الطلاب غير النشطين</h3>
                 <p id="inactiveStudents">0</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add this right after the Quick Stats section -->
+          <div class="reference-data-section">
+            <!-- Specialties Management -->
+            <div class="content-card">
+              <div class="card-header">
+                <h3>إدارة التخصصات</h3>
+                <button class="btn-primary" onclick="showAddSpecialtyModal()">
+                  <i class="fas fa-plus"></i> إضافة تخصص
+                </button>
+              </div>
+              <div class="table-wrapper">
+                <table class="data-table" id="specialtiesTable">
+                  <thead>
+                    <tr>
+                      <th>التخصص</th>
+                      <th>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="specialtiesTableBody">
+                    <!-- Specialties will be loaded here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Grades Management -->
+            <div class="content-card">
+              <div class="card-header">
+                <h3>إدارة المستويات التعليمية</h3>
+                <button class="btn-primary" onclick="showAddGradeModal()">
+                  <i class="fas fa-plus"></i> إضافة مستوى
+                </button>
+              </div>
+              <div class="table-wrapper">
+                <table class="data-table" id="gradesTable">
+                  <thead>
+                    <tr>
+                      <th>المستوى</th>
+                      <th>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="gradesTableBody">
+                    <!-- Grades will be loaded here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Classes Management -->
+            <div class="content-card">
+              <div class="card-header">
+                <h3>إدارة الأقسام</h3>
+                <button class="btn-primary" onclick="showAddClassModal()">
+                  <i class="fas fa-plus"></i> إضافة قسم
+                </button>
+              </div>
+              <div class="table-wrapper">
+                <table class="data-table" id="classesTable">
+                  <thead>
+                    <tr>
+                      <th>القسم</th>
+                      <th>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="classesTableBody">
+                    <!-- Classes will be loaded here -->
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -451,7 +752,1113 @@
       <i class="fas fa-file-export"></i>
     </button>
 
+    <!-- Add Modals -->
+    <!-- Specialty Modal -->
+    <div id="specialtyModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="specialtyModalTitle">إضافة تخصص</h2>
+          <button class="close-btn" onclick="closeModal('specialtyModal')">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="specialtyForm" onsubmit="handleSpecialtySubmit(event)">
+            <div class="form-group">
+              <label for="specialtyName">اسم التخصص</label>
+              <input type="text" id="specialtyName" name="name" required />
+              <input type="hidden" id="specialtyId" name="id" />
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                onclick="closeModal('specialtyModal')"
+              >
+                إلغاء
+              </button>
+              <button type="submit" class="btn-primary">حفظ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grade Modal -->
+    <div id="gradeModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="gradeModalTitle">إضافة مستوى تعليمي</h2>
+          <button class="close-btn" onclick="closeModal('gradeModal')">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="gradeForm" onsubmit="handleGradeSubmit(event)">
+            <div class="form-group">
+              <label for="gradeName">اسم المستوى</label>
+              <input type="text" id="gradeName" name="name" required />
+              <input type="hidden" id="gradeId" name="id" />
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                onclick="closeModal('gradeModal')"
+              >
+                إلغاء
+              </button>
+              <button type="submit" class="btn-primary">حفظ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Class Modal -->
+    <div id="classModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="classModalTitle">إضافة قسم</h2>
+          <button class="close-btn" onclick="closeModal('classModal')">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="classForm" onsubmit="handleClassSubmit(event)">
+            <div class="form-group">
+              <label for="className">رقم القسم</label>
+              <input type="text" id="className" name="name" required />
+              <input type="hidden" id="classId" name="id" />
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                onclick="closeModal('classModal')"
+              >
+                إلغاء
+              </button>
+              <button type="submit" class="btn-primary">حفظ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Custom Scripts -->
-    <script src="../js/students.js"></script>
+    <!-- <script src="../js/students.js"></script> -->
+    <script>
+      let currentPage = 1;
+      const pageSize = 10;
+      let totalStudents = [];
+
+      // Function to fetch and display student data
+      async function fetchAndDisplayStudents() {
+        try {
+          console.log("Fetching student data from Firebase...");
+
+          const isConnected = await checkFirebaseConnection();
+          if (!isConnected) {
+            showNotification("لا يمكن الاتصال بـ Firebase", "error");
+            return;
+          }
+
+          const studentsRef = db.collection("students");
+          const snapshot = await studentsRef.get();
+
+          if (snapshot.empty) {
+            console.log("No students found in database");
+            updateStats(0, 0, 0);
+            displayStudentsInTable([]);
+            return;
+          }
+
+          totalStudents = [];
+          let activeCount = 0;
+          let inactiveCount = 0;
+
+          // Fetch all reference data first
+          const specialtiesSnapshot = await specialtiesRef.get();
+          const gradesSnapshot = await gradesRef.get();
+          const classesSnapshot = await classesRef.get();
+
+          // Create maps for quick lookups
+          const specialtiesMap = new Map();
+          const gradesMap = new Map();
+          const classesMap = new Map();
+
+          specialtiesSnapshot.forEach((doc) =>
+            specialtiesMap.set(doc.id, doc.data().name)
+          );
+          gradesSnapshot.forEach((doc) =>
+            gradesMap.set(doc.id, doc.data().name)
+          );
+          classesSnapshot.forEach((doc) =>
+            classesMap.set(doc.id, doc.data().name)
+          );
+
+          for (const doc of snapshot.docs) {
+            const data = doc.data();
+
+            // Get referenced data
+            let specialtyName = "";
+            let gradeName = "";
+            let className = "";
+
+            if (data.specialty_ref) {
+              specialtyName = specialtiesMap.get(data.specialty_ref.id) || "";
+            }
+            if (data.grade_ref) {
+              gradeName = gradesMap.get(data.grade_ref.id) || "";
+            }
+            if (data.class_ref) {
+              className = classesMap.get(data.class_ref.id) || "";
+            }
+
+            const studentData = {
+              id: doc.id,
+              name: data.first_name || "",
+              lastName: data.last_name || "",
+              gender: data.gender || "",
+              تاريخ_الازدياد: data.birth_date || "",
+              currentGrade: gradeName,
+              specialty: specialtyName,
+              className: className,
+              نظام_التمدرس: data.education_system || "",
+              isActive: data.isActive ?? true,
+              birthPlace: data.birth_place || "",
+              birthCertificate: data.birth_certificate || "",
+              birthCertificateNumber: data.birth_certificate_number || "",
+              registrationDate: data.registration_date || "",
+              رقم_القيد: data.registration_number || "",
+            };
+
+            totalStudents.push(studentData);
+            if (studentData.isActive) activeCount++;
+            else inactiveCount++;
+          }
+
+          // Update stats
+          updateStats(totalStudents.length, activeCount, inactiveCount);
+
+          // Update table with pagination
+          updateTableDisplay();
+
+          console.log("Student data loaded and formatted successfully!");
+        } catch (error) {
+          console.error("Error fetching student data:", error);
+          showNotification("حدث خطأ أثناء تحميل بيانات الطلاب", "error");
+        }
+      }
+
+      // Function to update table display with pagination
+      function updateTableDisplay() {
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const paginatedStudents = totalStudents.slice(start, end);
+
+        displayStudentsInTable(paginatedStudents);
+        updatePagination();
+      }
+
+      // Function to update pagination controls
+      function updatePagination() {
+        const totalPages = Math.ceil(totalStudents.length / pageSize);
+        document.getElementById("currentPage").textContent = currentPage;
+        document.getElementById("totalPages").textContent = totalPages;
+
+        document.getElementById("prevPage").disabled = currentPage === 1;
+        document.getElementById("nextPage").disabled =
+          currentPage === totalPages;
+      }
+
+      // Function to handle file upload and preview
+      async function handleFileUpload(file) {
+        try {
+          console.log("Processing Excel file:", file.name);
+          const reader = new FileReader();
+
+          reader.onload = async function (e) {
+            try {
+              const data = new Uint8Array(e.target.result);
+              const workbook = XLSX.read(data, {
+                type: "array",
+                cellDates: true,
+              });
+              const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+
+              // Convert to JSON with header row mapping
+              const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+                raw: false,
+                dateNF: "yyyy-mm-dd",
+                defval: "",
+              });
+
+              if (jsonData.length === 0) {
+                throw new Error("الملف لا يحتوي على بيانات");
+              }
+
+              // Get headers from first row
+              const headers = Object.keys(jsonData[0]);
+
+              // Store data for later upload
+              window.excelData = jsonData;
+              window.excelHeaders = headers;
+
+              // Initialize reference data from Excel
+              await initializeReferenceData(jsonData);
+
+              // Reload reference data in dropdowns
+              await Promise.all([
+                loadSpecialties(),
+                loadGrades(),
+                loadClasses(),
+                loadSpecialtiesTable(),
+                loadGradesTable(),
+                loadClassesTable(),
+              ]);
+
+              // Show preview
+              showPreview(headers, jsonData);
+
+              // Show success message
+              showNotification(
+                "تم تحميل الملف وتهيئة البيانات المرجعية بنجاح",
+                "success"
+              );
+
+              console.log("Excel data processed successfully:", {
+                headers,
+                rowCount: jsonData.length,
+              });
+            } catch (error) {
+              console.error("Error processing Excel content:", error);
+              showNotification("حدث خطأ أثناء معالجة محتوى الملف", "error");
+            }
+          };
+
+          reader.onerror = function () {
+            console.error("Error reading file");
+            showNotification("حدث خطأ أثناء قراءة الملف", "error");
+          };
+
+          reader.readAsArrayBuffer(file);
+        } catch (error) {
+          console.error("Error processing Excel file:", error);
+          showNotification("حدث خطأ أثناء معالجة الملف", "error");
+        }
+      }
+
+      // Function to show preview
+      function showPreview(headers, data) {
+        const previewSection = document.getElementById("previewSection");
+        const previewTable = document.getElementById("previewTable");
+        const recordCount = document.getElementById("recordCount");
+
+        recordCount.textContent = data.length;
+
+        let tableHTML = "<thead><tr>";
+        headers.forEach((header) => {
+          tableHTML += `<th>${header}</th>`;
+        });
+        tableHTML += "</tr></thead><tbody>";
+
+        // Show first 5 rows
+        data.slice(0, 5).forEach((row) => {
+          tableHTML += "<tr>";
+          headers.forEach((header) => {
+            tableHTML += `<td>${row[header] || ""}</td>`;
+          });
+          tableHTML += "</tr>";
+        });
+
+        tableHTML += "</tbody>";
+        previewTable.innerHTML = tableHTML;
+        previewSection.style.display = "block";
+      }
+
+      // Function to upload data to Firebase
+      async function uploadToFirebase(data) {
+        try {
+          console.log("Starting Firebase upload with", data.length, "records");
+
+          const batch = db.batch();
+          const studentsRef = db.collection("students");
+
+          let successCount = 0;
+          let errorCount = 0;
+          let updateCount = 0;
+
+          for (const row of data) {
+            try {
+              // Get references to related data
+              let specialtyRef = null;
+              let gradeRef = null;
+              let classRef = null;
+
+              // Find specialty reference
+              const specialtySnapshot = await specialtiesRef
+                .where("name", "==", row["الشعبة"])
+                .get();
+              if (!specialtySnapshot.empty) {
+                specialtyRef = specialtySnapshot.docs[0].ref;
+              }
+
+              // Find grade reference
+              const gradeSnapshot = await gradesRef
+                .where("name", "==", row["السنة"])
+                .get();
+              if (!gradeSnapshot.empty) {
+                gradeRef = gradeSnapshot.docs[0].ref;
+              }
+
+              // Find class reference
+              const classSnapshot = await classesRef
+                .where("name", "==", row["القسم"])
+                .get();
+              if (!classSnapshot.empty) {
+                classRef = classSnapshot.docs[0].ref;
+              }
+
+              const studentData = {
+                registration_id: (row["رقم التعريف"] || "").toString().trim(),
+                last_name: (row["اللقب"] || "").trim(),
+                first_name: (row["الاسم"] || "").trim(),
+                gender: (row["الجنس"] || "").trim(),
+                birth_date: row["تاريخ الازدياد"] || "",
+                birth_by_judgment: (row["مولود بحكم"] || "").trim(),
+                birth_certificate: (row["عقد الميلاد"] || "").trim(),
+                birth_record_year: (
+                  row["سنة التسجيل في سجل الولادات"] || ""
+                ).trim(),
+                birth_certificate_number: (row["رقم عقد الميلاد"] || "")
+                  .toString()
+                  .trim(),
+                birth_place: (row["مكان الازدياد"] || "").trim(),
+                specialty_ref: specialtyRef,
+                grade_ref: gradeRef,
+                class_ref: classRef,
+                education_system: (row["نظام التمدرس"] || "").trim(),
+                registration_number: (row["رقم القيد"] || "").toString().trim(),
+                registration_date:
+                  row["تاريخ التسجيل"] || new Date().toISOString(),
+                isActive: true,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              };
+
+              if (!studentData.registration_id) {
+                console.warn(
+                  "Skipping invalid record - missing registration ID"
+                );
+                errorCount++;
+                continue;
+              }
+
+              const docRef = studentsRef.doc(studentData.registration_id);
+              const doc = await docRef.get();
+
+              if (doc.exists) {
+                batch.update(docRef, {
+                  ...studentData,
+                  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+                updateCount++;
+              } else {
+                batch.set(docRef, studentData);
+                successCount++;
+              }
+            } catch (error) {
+              console.error("Error processing row:", error);
+              errorCount++;
+            }
+
+            // Commit batch every 500 records
+            if ((successCount + updateCount) % 500 === 0) {
+              await batch.commit();
+              batch = db.batch();
+            }
+          }
+
+          // Commit remaining records
+          if ((successCount + updateCount) % 500 !== 0) {
+            await batch.commit();
+          }
+
+          showNotification(
+            `تم الرفع بنجاح: ${successCount} جديد، ${updateCount} تحديث، ${errorCount} خطأ`,
+            errorCount > 0 ? "warning" : "success"
+          );
+
+          // Refresh display
+          await fetchAndDisplayStudents();
+
+          // Hide preview section
+          document.getElementById("previewSection").style.display = "none";
+        } catch (error) {
+          console.error("Error uploading to Firebase:", error);
+          showNotification("حدث خطأ أثناء رفع البيانات", "error");
+        }
+      }
+
+      // Function to display students in table
+      function displayStudentsInTable(students) {
+        const tableBody = document.getElementById("studentsTableBody");
+        if (!tableBody) return;
+
+        if (students.length === 0) {
+          tableBody.innerHTML =
+            '<tr><td colspan="11" class="no-data">لا توجد بيانات</td></tr>';
+          return;
+        }
+
+        // Function to convert Excel date number to readable date
+        function excelDateToJSDate(excelDate) {
+          if (!excelDate) return "";
+          // Excel dates are number of days since 1900-01-01
+          const date = new Date(
+            (excelDate - 1) * 24 * 60 * 60 * 1000 +
+              new Date("1900-01-01").getTime()
+          );
+          return date.toLocaleDateString("ar-SA");
+        }
+
+        tableBody.innerHTML = students
+          .map(
+            (student) => `
+            <tr>
+              <td>${student.id || ""}</td>
+              <td>${student.name || ""}</td>
+              <td>${student.lastName || ""}</td>
+              <td>${student.gender || ""}</td>
+              <td>${excelDateToJSDate(
+                student.تاريخ_الازدياد || student["تاريخ الازدياد"]
+              )}</td>
+              <td>${student.currentGrade || ""}</td>
+              <td>${student.specialty || ""}</td>
+              <td>${student.className || ""}</td>
+              <td>${student.نظام_التمدرس || student["نظام التمدرس"] || ""}</td>
+              <td>
+                <span class="status-badge ${
+                  student.isActive ? "active" : "inactive"
+                }">
+                  ${student.isActive ? "نشط" : "غير نشط"}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="action-btn edit" onclick="editStudent('${
+                  student.id
+                }')" title="تعديل">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn view" onclick="viewStudent('${
+                  student.id
+                }')" title="عرض">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-btn delete" onclick="deleteStudent('${
+                  student.id
+                }')" title="حذف">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+          `
+          )
+          .join("");
+      }
+
+      // Add these styles to your CSS
+      const style = document.createElement("style");
+      style.textContent = `
+        .status-badge {
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 0.9em;
+          font-weight: 500;
+        }
+        .status-badge.active {
+          background-color: #e3f2fd;
+          color: #1976d2;
+        }
+        .status-badge.inactive {
+          background-color: #ffebee;
+          color: #d32f2f;
+        }
+        .actions-cell {
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+        }
+        .action-btn {
+          padding: 6px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+        .action-btn:hover {
+          background-color: #f5f5f5;
+        }
+        .action-btn.edit {
+          color: #1976d2;
+        }
+        .action-btn.view {
+          color: #388e3c;
+        }
+        .action-btn.delete {
+          color: #d32f2f;
+        }
+      `;
+      document.head.appendChild(style);
+
+      // Function to edit student
+      async function editStudent(id) {
+        try {
+          const doc = await db.collection("students").doc(id).get();
+          if (doc.exists) {
+            const student = doc.data();
+
+            // Fill the form with student data
+            const form = document.getElementById("studentForm");
+            form.registration_id.value = id;
+            form.first_name.value = student.first_name || "";
+            form.last_name.value = student.last_name || "";
+            form.gender.value = student.gender || "";
+            form.birth_date.value = student.birth_date || "";
+            form.birth_place.value = student.birth_place || "";
+            form.birth_by_judgment.value = student.birth_by_judgment || "";
+            form.birth_certificate.value = student.birth_certificate || "";
+            form.birth_record_year.value = student.birth_record_year || "";
+            form.birth_certificate_number.value =
+              student.birth_certificate_number || "";
+            form.registration_number.value = student.registration_number || "";
+            form.registration_date.value = student.registration_date
+              ? new Date(student.registration_date).toISOString().split("T")[0]
+              : "";
+
+            // Handle references
+            if (student.specialty_ref) {
+              form.specialty_id.value = student.specialty_ref.id;
+            }
+            if (student.grade_ref) {
+              form.education_level_id.value = student.grade_ref.id;
+            }
+            if (student.class_ref) {
+              form.section_id.value = student.class_ref.id;
+            }
+            if (student.education_system) {
+              form.education_system_id.value = student.education_system;
+            }
+
+            // Show modal
+            document.getElementById("studentModal").style.display = "block";
+            document.getElementById("modalTitle").textContent =
+              "تعديل بيانات الطالب";
+          }
+        } catch (error) {
+          console.error("Error loading student data:", error);
+          showNotification("حدث خطأ أثناء تحميل بيانات الطالب", "error");
+        }
+      }
+
+      // Function to view student
+      async function viewStudent(id) {
+        try {
+          const doc = await db.collection("students").doc(id).get();
+          if (doc.exists) {
+            // Redirect to student profile page
+            window.location.href = `student-profile.html?id=${id}`;
+          }
+        } catch (error) {
+          console.error("Error loading student data:", error);
+          showNotification("حدث خطأ أثناء تحميل بيانات الطالب", "error");
+        }
+      }
+
+      // Function to delete student
+      async function deleteStudent(id) {
+        if (confirm("هل أنت متأكد من حذف هذا الطالب؟")) {
+          try {
+            await db.collection("students").doc(id).delete();
+            showNotification("تم حذف الطالب بنجاح", "success");
+            fetchAndDisplayStudents(); // Refresh the table
+          } catch (error) {
+            console.error("Error deleting student:", error);
+            showNotification("حدث خطأ أثناء حذف الطالب", "error");
+          }
+        }
+      }
+
+      // Event Listeners
+      document.addEventListener("DOMContentLoaded", async () => {
+        // Load existing reference data into dropdowns
+        await Promise.all([
+          loadSpecialties(),
+          loadGrades(),
+          loadClasses(),
+          loadSpecialtiesTable(),
+          loadGradesTable(),
+          loadClassesTable(),
+        ]);
+
+        fetchAndDisplayStudents();
+
+        // File input change handler
+        document
+          .getElementById("studentExcelFile")
+          .addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (file) handleFileUpload(file);
+          });
+
+        // Upload button click handler
+        document.getElementById("uploadBtn").addEventListener("click", () => {
+          if (window.excelData) {
+            uploadToFirebase(window.excelData);
+          } else {
+            showNotification("لا توجد بيانات للرفع", "error");
+          }
+        });
+
+        // Cancel button click handler
+        document.getElementById("cancelBtn").addEventListener("click", () => {
+          document.getElementById("previewSection").style.display = "none";
+          window.excelData = null;
+          window.excelHeaders = null;
+        });
+
+        // Search input handler
+        document
+          .getElementById("searchInput")
+          .addEventListener("input", (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll("#studentsTableBody tr");
+
+            rows.forEach((row) => {
+              const text = row.textContent.toLowerCase();
+              row.style.display = text.includes(searchTerm) ? "" : "none";
+            });
+          });
+
+        // Pagination event listeners
+        document.getElementById("prevPage").addEventListener("click", () => {
+          if (currentPage > 1) {
+            currentPage--;
+            updateTableDisplay();
+          }
+        });
+
+        document.getElementById("nextPage").addEventListener("click", () => {
+          const totalPages = Math.ceil(totalStudents.length / pageSize);
+          if (currentPage < totalPages) {
+            currentPage++;
+            updateTableDisplay();
+          }
+        });
+
+        // Add Student button click handler
+        document
+          .getElementById("addStudentBtn")
+          .addEventListener("click", () => {
+            // Reset form
+            document.getElementById("studentForm").reset();
+            document.getElementById("modalTitle").textContent = "إضافة طالب";
+            document.getElementById("studentModal").style.display = "block";
+          });
+
+        // Close modal button handler
+        document
+          .querySelector("#studentModal .close-btn")
+          .addEventListener("click", () => {
+            document.getElementById("studentModal").style.display = "none";
+          });
+
+        // Cancel button handler
+        document
+          .getElementById("cancelModalBtn")
+          .addEventListener("click", () => {
+            document.getElementById("studentModal").style.display = "none";
+          });
+
+        // Form submit handler
+        document
+          .getElementById("studentForm")
+          .addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const form = e.target;
+
+            try {
+              const studentData = {
+                registration_id: form.registration_id.value.trim(),
+                first_name: form.first_name.value.trim(),
+                last_name: form.last_name.value.trim(),
+                gender: form.gender.value,
+                birth_date: form.birth_date.value,
+                birth_place: form.birth_place.value.trim(),
+                birth_by_judgment: form.birth_by_judgment.value.trim(),
+                birth_certificate: form.birth_certificate.value.trim(),
+                birth_record_year: form.birth_record_year.value.trim(),
+                birth_certificate_number:
+                  form.birth_certificate_number.value.trim(),
+                registration_number: form.registration_number.value.trim(),
+                registration_date:
+                  form.registration_date.value || new Date().toISOString(),
+                isActive: true,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              };
+
+              // Get references to related data
+              if (form.specialty_id.value) {
+                studentData.specialty_ref = db.doc(
+                  `specialties/${form.specialty_id.value}`
+                );
+              }
+              if (form.education_level_id.value) {
+                studentData.grade_ref = db.doc(
+                  `grades/${form.education_level_id.value}`
+                );
+              }
+              if (form.section_id.value) {
+                studentData.class_ref = db.doc(
+                  `classes/${form.section_id.value}`
+                );
+              }
+              if (form.education_system_id.value) {
+                studentData.education_system = form.education_system_id.value;
+              }
+
+              const studentsRef = db.collection("students");
+
+              if (!studentData.registration_id) {
+                throw new Error("رقم التعريف مطلوب");
+              }
+
+              const docRef = studentsRef.doc(studentData.registration_id);
+              const doc = await docRef.get();
+
+              if (doc.exists) {
+                // Update existing student
+                await docRef.update(studentData);
+                showNotification("تم تحديث بيانات الطالب بنجاح", "success");
+              } else {
+                // Add new student
+                studentData.createdAt =
+                  firebase.firestore.FieldValue.serverTimestamp();
+                await docRef.set(studentData);
+                showNotification("تم إضافة الطالب بنجاح", "success");
+              }
+
+              // Close modal and refresh table
+              document.getElementById("studentModal").style.display = "none";
+              await fetchAndDisplayStudents();
+            } catch (error) {
+              console.error("Error saving student:", error);
+              showNotification(
+                error.message || "حدث خطأ أثناء حفظ بيانات الطالب",
+                "error"
+              );
+            }
+          });
+      });
+
+      // Helper Functions
+      function showNotification(message, type = "info") {
+        const container = document.getElementById("notificationContainer");
+        if (!container) return;
+
+        const notification = document.createElement("div");
+        notification.className = `notification ${type}`;
+
+        const icon =
+          type === "success"
+            ? "check-circle"
+            : type === "error"
+            ? "exclamation-circle"
+            : type === "warning"
+            ? "exclamation-triangle"
+            : "info-circle";
+
+        notification.innerHTML = `
+          <i class="fas fa-${icon}"></i>
+          <span>${message}</span>
+        `;
+
+        container.appendChild(notification);
+
+        setTimeout(() => {
+          notification.classList.add("fade-out");
+          setTimeout(() => notification.remove(), 300);
+        }, 5000);
+      }
+
+      function updateStats(total, active, inactive) {
+        document.getElementById("totalStudents").textContent = total;
+        document.getElementById("activeStudents").textContent = active;
+        document.getElementById("inactiveStudents").textContent = inactive;
+      }
+
+      // Add these functions after your existing JavaScript code
+
+      // Function to load specialties table
+      async function loadSpecialtiesTable() {
+        try {
+          const snapshot = await specialtiesRef.get();
+          const tbody = document.getElementById("specialtiesTableBody");
+          tbody.innerHTML = "";
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${data.name}</td>
+              <td class="actions-cell">
+                <button class="action-btn edit" onclick="editSpecialty('${doc.id}', '${data.name}')" title="تعديل">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn delete" onclick="deleteSpecialty('${doc.id}')" title="حذف">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Error loading specialties:", error);
+          showNotification("حدث خطأ أثناء تحميل التخصصات", "error");
+        }
+      }
+
+      // Function to load grades table
+      async function loadGradesTable() {
+        try {
+          const snapshot = await gradesRef.get();
+          const tbody = document.getElementById("gradesTableBody");
+          tbody.innerHTML = "";
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${data.name}</td>
+              <td class="actions-cell">
+                <button class="action-btn edit" onclick="editGrade('${doc.id}', '${data.name}')" title="تعديل">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn delete" onclick="deleteGrade('${doc.id}')" title="حذف">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Error loading grades:", error);
+          showNotification("حدث خطأ أثناء تحميل المستويات", "error");
+        }
+      }
+
+      // Function to load classes table
+      async function loadClassesTable() {
+        try {
+          const snapshot = await classesRef.get();
+          const tbody = document.getElementById("classesTableBody");
+          tbody.innerHTML = "";
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${data.name}</td>
+              <td class="actions-cell">
+                <button class="action-btn edit" onclick="editClass('${doc.id}', '${data.name}')" title="تعديل">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn delete" onclick="deleteClass('${doc.id}')" title="حذف">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Error loading classes:", error);
+          showNotification("حدث خطأ أثناء تحميل الأقسام", "error");
+        }
+      }
+
+      // Modal functions
+      function showModal(modalId) {
+        document.getElementById(modalId).style.display = "block";
+      }
+
+      function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+        // Clear form
+        document.getElementById(modalId.replace("Modal", "Form")).reset();
+        document.getElementById(modalId.replace("Modal", "Id")).value = "";
+      }
+
+      // Specialty CRUD operations
+      function showAddSpecialtyModal() {
+        document.getElementById("specialtyModalTitle").textContent =
+          "إضافة تخصص";
+        document.getElementById("specialtyId").value = "";
+        showModal("specialtyModal");
+      }
+
+      function editSpecialty(id, name) {
+        document.getElementById("specialtyModalTitle").textContent =
+          "تعديل تخصص";
+        document.getElementById("specialtyId").value = id;
+        document.getElementById("specialtyName").value = name;
+        showModal("specialtyModal");
+      }
+
+      async function deleteSpecialty(id) {
+        if (confirm("هل أنت متأكد من حذف هذا التخصص؟")) {
+          try {
+            await specialtiesRef.doc(id).delete();
+            showNotification("تم حذف التخصص بنجاح", "success");
+            await Promise.all([loadSpecialtiesTable(), loadSpecialties()]);
+          } catch (error) {
+            console.error("Error deleting specialty:", error);
+            showNotification("حدث خطأ أثناء حذف التخصص", "error");
+          }
+        }
+      }
+
+      async function handleSpecialtySubmit(event) {
+        event.preventDefault();
+        const form = event.target;
+        const id = form.id.value;
+        const name = form.name.value;
+
+        try {
+          if (id) {
+            await specialtiesRef.doc(id).update({ name });
+            showNotification("تم تحديث التخصص بنجاح", "success");
+          } else {
+            await specialtiesRef.add({ name });
+            showNotification("تم إضافة التخصص بنجاح", "success");
+          }
+          closeModal("specialtyModal");
+          await Promise.all([loadSpecialtiesTable(), loadSpecialties()]);
+        } catch (error) {
+          console.error("Error saving specialty:", error);
+          showNotification("حدث خطأ أثناء حفظ التخصص", "error");
+        }
+      }
+
+      // Grade CRUD operations
+      function showAddGradeModal() {
+        document.getElementById("gradeModalTitle").textContent =
+          "إضافة مستوى تعليمي";
+        document.getElementById("gradeId").value = "";
+        showModal("gradeModal");
+      }
+
+      function editGrade(id, name) {
+        document.getElementById("gradeModalTitle").textContent =
+          "تعديل مستوى تعليمي";
+        document.getElementById("gradeId").value = id;
+        document.getElementById("gradeName").value = name;
+        showModal("gradeModal");
+      }
+
+      async function deleteGrade(id) {
+        if (confirm("هل أنت متأكد من حذف هذا المستوى؟")) {
+          try {
+            await gradesRef.doc(id).delete();
+            showNotification("تم حذف المستوى بنجاح", "success");
+            await Promise.all([loadGradesTable(), loadGrades()]);
+          } catch (error) {
+            console.error("Error deleting grade:", error);
+            showNotification("حدث خطأ أثناء حذف المستوى", "error");
+          }
+        }
+      }
+
+      async function handleGradeSubmit(event) {
+        event.preventDefault();
+        const form = event.target;
+        const id = form.id.value;
+        const name = form.name.value;
+
+        try {
+          if (id) {
+            await gradesRef.doc(id).update({ name });
+            showNotification("تم تحديث المستوى بنجاح", "success");
+          } else {
+            await gradesRef.add({ name });
+            showNotification("تم إضافة المستوى بنجاح", "success");
+          }
+          closeModal("gradeModal");
+          await Promise.all([loadGradesTable(), loadGrades()]);
+        } catch (error) {
+          console.error("Error saving grade:", error);
+          showNotification("حدث خطأ أثناء حفظ المستوى", "error");
+        }
+      }
+
+      // Class CRUD operations
+      function showAddClassModal() {
+        document.getElementById("classModalTitle").textContent = "إضافة قسم";
+        document.getElementById("classId").value = "";
+        showModal("classModal");
+      }
+
+      function editClass(id, name) {
+        document.getElementById("classModalTitle").textContent = "تعديل قسم";
+        document.getElementById("classId").value = id;
+        document.getElementById("className").value = name;
+        showModal("classModal");
+      }
+
+      async function deleteClass(id) {
+        if (confirm("هل أنت متأكد من حذف هذا القسم؟")) {
+          try {
+            await classesRef.doc(id).delete();
+            showNotification("تم حذف القسم بنجاح", "success");
+            await Promise.all([loadClassesTable(), loadClasses()]);
+          } catch (error) {
+            console.error("Error deleting class:", error);
+            showNotification("حدث خطأ أثناء حذف القسم", "error");
+          }
+        }
+      }
+
+      async function handleClassSubmit(event) {
+        event.preventDefault();
+        const form = event.target;
+        const id = form.id.value;
+        const name = form.name.value;
+
+        try {
+          if (id) {
+            await classesRef.doc(id).update({ name });
+            showNotification("تم تحديث القسم بنجاح", "success");
+          } else {
+            await classesRef.add({ name });
+            showNotification("تم إضافة القسم بنجاح", "success");
+          }
+          closeModal("classModal");
+          await Promise.all([loadClassesTable(), loadClasses()]);
+        } catch (error) {
+          console.error("Error saving class:", error);
+          showNotification("حدث خطأ أثناء حفظ القسم", "error");
+        }
+      }
+
+      // Add education system options
+      const educationSystemSelect = document.getElementById("educationSystem");
+      educationSystemSelect.innerHTML = `
+        <option value="">اختر نظام التمدرس</option>
+        <option value="خارجي">خارجي</option>
+        <option value="نصف داخلي">نصف داخلي</option>
+        <option value="داخلي">داخلي</option>
+      `;
+    </script>
   </body>
 </html>

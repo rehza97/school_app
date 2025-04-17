@@ -1,1525 +1,1204 @@
-// Verify XLSX library loaded
-console.log("teachers.js loading...");
-console.log("XLSX available:", typeof XLSX !== "undefined");
+// Initialize Firebase and XLSX with debug logging
+console.log("🚀 Starting teachers.js initialization...");
+console.log("📚 Debug Information:");
 console.log(
-  "Excel library version:",
-  typeof XLSX !== "undefined" ? XLSX.version : "not loaded"
+  "- XLSX Library:",
+  typeof XLSX !== "undefined" ? "✅ Loaded" : "❌ Not loaded"
+);
+console.log("- Excel Version:", XLSX ? XLSX.version : "Not available");
+console.log(
+  "- Firebase:",
+  typeof firebase !== "undefined" ? "✅ Loaded" : "❌ Not loaded"
 );
 
-// DOM Elements
-const totalTeachersElement = document.getElementById("totalTeachers");
-const activeTeachersElement = document.getElementById("activeTeachers");
-const totalSubjectsElement = document.getElementById("totalSubjects");
-const teachersTableBody = document.getElementById("teachersTableBody");
-const searchInput = document.getElementById("searchInput");
-const subjectFilter = document.getElementById("subjectFilter");
-const statusFilter = document.getElementById("statusFilter");
-const prevPageBtn = document.getElementById("prevPage");
-const nextPageBtn = document.getElementById("nextPage");
-const pageNumbers = document.getElementById("pageNumbers");
-const addTeacherBtn = document.getElementById("addTeacherBtn");
-const teacherModal = document.getElementById("teacherModal");
-const modalTitle = document.getElementById("modalTitle");
-const teacherForm = document.getElementById("teacherForm");
-const teacherId = document.getElementById("teacherId");
-const teacherName = document.getElementById("teacherName");
-const teacherSubject = document.getElementById("teacherSubject");
-const teacherStatus = document.getElementById("teacherStatus");
-const teacherPhone = document.getElementById("teacherPhone");
-const teacherEmail = document.getElementById("teacherEmail");
-const cancelModalBtn = document.getElementById("cancelModalBtn");
-const modalCloseBtn = document.querySelector(".close");
-const fileUploadBtn = document.getElementById("fileUploadBtn");
-const excelFileInput = document.getElementById("excelFile");
-const notificationContainer = document.getElementById("notificationContainer");
-const themeToggle = document.getElementById("themeToggle");
-const selectedFileName = document.getElementById("selectedFileName");
-const previewSection = document.getElementById("previewSection");
-const previewTable = document.getElementById("previewTable");
-const recordCount = document.getElementById("recordCount");
-const cancelBtn = document.getElementById("cancelBtn");
-const uploadBtn = document.getElementById("uploadBtn");
-
-// State
+// Global variables with debug
+let teachersData = [];
 let currentPage = 1;
-let pageSize = 10;
-let teachers = [];
-let filteredTeachers = [];
-let currentFileData = null;
-let isEditMode = false;
-let currentSort = { field: null, direction: "asc" };
-let searchTerm = "";
-let allTeachers = [];
-let subjects = [];
-let roles = [];
+const pageSize = 10;
+let excelData = null;
 
-// Initialize page
-document.addEventListener("DOMContentLoaded", function () {
-  console.log("DOM fully loaded");
-  initialize();
-});
+// Debug configuration
+const DEBUG = true;
+const DEBUG_LEVELS = {
+  INFO: "📘",
+  SUCCESS: "✅",
+  WARNING: "⚠️",
+  ERROR: "❌",
+  FIREBASE: "🔥",
+  EXCEL: "📊",
+  DATA: "📝",
+};
 
-async function initialize() {
-  // Check if XLSX is available
-  if (typeof XLSX === "undefined") {
-    console.error("XLSX library not loaded!");
-    showNotification(
-      "فشل تحميل مكتبة Excel. يرجى تحديث الصفحة والمحاولة مرة أخرى.",
-      "error"
-    );
-  } else {
-    console.log("XLSX library loaded successfully");
-  }
+function debugLog(message, data = null, level = "INFO") {
+  if (!DEBUG) return;
 
-  // Verify all Excel-related elements exist
-  const excelElements = {
-    fileInput: document.getElementById("excelFile"),
-    uploadBtn: document.getElementById("fileUploadBtn"),
-    previewSection: document.getElementById("previewSection"),
-    previewTable: document.getElementById("previewTable"),
-    recordCount: document.getElementById("recordCount"),
-    uploadDataBtn: document.getElementById("uploadBtn"),
-    cancelBtn: document.getElementById("cancelBtn"),
-  };
+  const icon = DEBUG_LEVELS[level] || DEBUG_LEVELS.INFO;
+  const timestamp = new Date().toISOString().split("T")[1].split(".")[0];
 
-  console.log("Excel-related elements check:");
-  Object.entries(excelElements).forEach(([name, element]) => {
-    console.log(`- ${name}: ${element ? "Found" : "MISSING"}`);
-  });
-
-  try {
-    // Show loading indicator
-    showLoading(true);
-
-    // Load teachers from backend
-    await loadTeachers();
-
-    // Update stats after loading teachers
-    updateStats();
-
-    // Load subject filters after loading teachers
-  loadSubjectFilters();
-
-    // Load reference data
-    await loadReferenceData();
-
-    // Set up file upload
-    setupFileUpload();
-
-    // Set up event listeners
-    setupEventListeners();
-
-    // Initialize theme
-    checkTheme();
-
-    // Hide loading indicator
-    showLoading(false);
-  } catch (error) {
-    console.error("Error during initialization:", error);
-    showNotification("حدث خطأ أثناء تهيئة الصفحة", "error");
-    showLoading(false);
-  }
-}
-
-// Initialize theme
-function initializeTheme() {
-  // Default to light theme
-  const savedTheme = "light";
-  document.documentElement.setAttribute("data-theme", savedTheme);
-  updateThemeIcon(savedTheme);
-}
-
-// Toggle theme between light and dark
-function toggleTheme() {
-  const currentTheme = document.documentElement.getAttribute("data-theme");
-  const newTheme = currentTheme === "dark" ? "light" : "dark";
-
-  document.documentElement.setAttribute("data-theme", newTheme);
-
-  // Update theme icon
-  updateThemeIcon(newTheme);
-
-  // Show notification
-  showNotification(
-    newTheme === "dark" ? "تم تفعيل الوضع المظلم" : "تم تفعيل الوضع الفاتح",
-    "info"
-  );
-}
-
-// Update the theme toggle icon based on current theme
-function updateThemeIcon(theme) {
-  if (themeToggle) {
-    const iconClass = theme === "dark" ? "fa-sun" : "fa-moon";
-    themeToggle.innerHTML = `<i class="fas ${iconClass}"></i>`;
-  }
-}
-
-// Load teachers from API
-async function loadTeachers() {
-  try {
-    console.log("Fetching teachers from API...");
-
-    // Make a direct fetch call to the API
-    const response = await fetch(`${window.API_CONFIG.BASE_URL}/teachers`);
-
-    if (!response.ok) {
-      console.error(
-        `Error fetching teachers: ${response.status} ${response.statusText}`
-      );
-      showNotification("فشل في الاتصال بالخادم", "error");
-      return [];
-    }
-
-    const data = await response.json();
-    console.log(`Fetched ${data ? data.length : 0} teachers from API`);
-
-    // Ensure teachers is always an array
-    if (Array.isArray(data)) {
-      teachers = data;
-    } else {
-      console.error("API did not return an array, using empty array instead");
-      teachers = [];
-    }
-
-    // Initialize filtered list with all teachers
-    filteredTeachers = [...teachers];
-    console.log(
-      `Initialized filtered list with ${filteredTeachers.length} teachers`
-    );
-
-    // Update UI
-    renderTeachersTable();
-    renderPagination();
-
-    return teachers;
-  } catch (error) {
-    console.error("Error loading teachers:", error);
-    showNotification("حدث خطأ أثناء تحميل بيانات المعلمين", "error");
-    teachers = [];
-    filteredTeachers = [];
-    renderTeachersTable();
-    renderPagination();
-    return [];
-  }
-}
-
-// Load reference data (subjects and roles)
-async function loadReferenceData() {
-  try {
-    // Fetch subjects
-    const subjectsResponse = await fetch(
-      `${window.API_CONFIG.BASE_URL}${window.API_CONFIG.SUBJECTS}`
-    );
-    if (subjectsResponse.ok) {
-      subjects = await subjectsResponse.json();
-      console.log(`Loaded ${subjects.length} subjects`);
-    } else {
-      console.error("Failed to load subjects");
-    }
-
-    // Fetch teacher roles
-    const rolesResponse = await fetch(
-      `${window.API_CONFIG.BASE_URL}${window.API_CONFIG.TEACHER_ROLES}`
-    );
-    if (rolesResponse.ok) {
-      roles = await rolesResponse.json();
-      console.log(`Loaded ${roles.length} teacher roles`);
-    } else {
-      console.error("Failed to load teacher roles");
-    }
-
-    // Populate dropdowns for reference data
-    populateReferenceDropdowns();
-  } catch (error) {
-    console.error("Error loading reference data:", error);
-  }
-}
-
-// Populate reference data dropdowns
-function populateReferenceDropdowns() {
-  // Populate subject filter dropdown
-  if (subjectFilter && subjects.length > 0) {
-    // Clear existing options except the first one
-    while (subjectFilter.options.length > 1) {
-      subjectFilter.remove(1);
-    }
-
-    // Add subject options
-    subjects.forEach((subject) => {
-      const option = document.createElement("option");
-      option.value = subject.name;
-      option.textContent = subject.name;
-      subjectFilter.appendChild(option);
-    });
-  }
-
-  // If there's a teacher subject dropdown in the form, populate it
-  const teacherSubjectDropdown = document.getElementById("teacherSubject");
-  if (teacherSubjectDropdown && subjects.length > 0) {
-    // Clear existing options
-    teacherSubjectDropdown.innerHTML = "";
-
-    // Add empty option
-    const emptyOption = document.createElement("option");
-    emptyOption.value = "";
-    emptyOption.textContent = "اختر المادة";
-    teacherSubjectDropdown.appendChild(emptyOption);
-
-    // Add subject options
-    subjects.forEach((subject) => {
-      const option = document.createElement("option");
-      option.value = subject.name;
-      option.textContent = subject.name;
-      teacherSubjectDropdown.appendChild(option);
-    });
-  }
-
-  // If there's a teacher role dropdown in the form, populate it
-  const teacherRoleDropdown = document.getElementById("teacherRole");
-  if (teacherRoleDropdown && roles.length > 0) {
-    // Clear existing options
-    teacherRoleDropdown.innerHTML = "";
-
-    // Add empty option
-    const emptyOption = document.createElement("option");
-    emptyOption.value = "";
-    emptyOption.textContent = "اختر الرتبة";
-    teacherRoleDropdown.appendChild(emptyOption);
-
-    // Add role options
-    roles.forEach((role) => {
-      const option = document.createElement("option");
-      option.value = role.name;
-      option.textContent = role.name;
-      teacherRoleDropdown.appendChild(option);
-    });
-  }
-}
-
-// Update statistics
-async function updateStats() {
-  try {
-    // Get elements
-    const totalTeachersElement = document.getElementById("totalTeachers");
-    const activeTeachersElement = document.getElementById("activeTeachers");
-    const totalSubjectsElement = document.getElementById("totalSubjects");
-
-    // Update from local data first
-    if (totalTeachersElement) {
-      totalTeachersElement.textContent = teachers.length;
-    }
-
-    if (activeTeachersElement) {
-      const activeCount = teachers.filter((t) => t.active !== false).length;
-      activeTeachersElement.textContent = activeCount;
-    }
-
-    if (totalSubjectsElement) {
-    // Get unique subjects
-      const uniqueSubjects = new Set();
-    teachers.forEach((teacher) => {
-        if (teacher.subject_name) {
-          uniqueSubjects.add(teacher.subject_name);
+  if (data) {
+    if (typeof data === "object" && data !== null) {
+      console.group(`${icon} [${timestamp}] ${message}`);
+      Object.entries(data).forEach(([key, value]) => {
+        if (key.toLowerCase().includes("ref")) {
+          console.log(`${key}:`, value ? value.path : "null");
+        } else {
+          console.log(`${key}:`, value);
         }
       });
-      totalSubjectsElement.textContent = uniqueSubjects.size;
-    }
-
-    console.log("Stats updated from local data");
-
-    // Try to get more accurate counts from API
-    try {
-      const response = await fetch(
-        `${window.API_CONFIG.BASE_URL}${window.API_CONFIG.STATS}`
-      );
-      if (response.ok) {
-        const stats = await response.json();
-        console.log("Fetched stats from API:", stats);
-
-        if (totalTeachersElement && stats.total) {
-          totalTeachersElement.textContent = stats.total;
-        }
-
-        if (activeTeachersElement && stats.active) {
-          activeTeachersElement.textContent = stats.active;
-        }
-      }
-    } catch (apiError) {
-      console.warn("Could not fetch stats from API:", apiError);
-    }
-  } catch (error) {
-    console.error("Error updating stats:", error);
-  }
-}
-
-// Load subject filters
-function loadSubjectFilters() {
-  try {
-    // Clear existing options except the first one
-    while (subjectFilter.options.length > 1) {
-      subjectFilter.remove(1);
-    }
-
-    // Get unique subjects
-    const uniqueSubjects = new Set();
-    teachers.forEach((teacher) => {
-      if (teacher.subject_name) {
-        uniqueSubjects.add(teacher.subject_name);
-      }
-    });
-
-    // Add options
-    Array.from(uniqueSubjects)
-      .sort()
-      .forEach((subject) => {
-      const option = document.createElement("option");
-      option.value = subject;
-      option.textContent = subject;
-      subjectFilter.appendChild(option);
-    });
-  } catch (error) {
-    console.error("Error loading subject filters:", error);
-  }
-}
-
-// Filter teachers based on search term and selected filters
-function applyFilters() {
-  try {
-    searchTerm = searchInput.value.toLowerCase();
-    const subject = subjectFilter.value;
-    const status = statusFilter.value;
-
-    filteredTeachers = teachers.filter((teacher) => {
-      // Search term filter
-      const codeMatch =
-        teacher.registration_id &&
-        teacher.registration_id.toString().toLowerCase().includes(searchTerm);
-      const firstNameMatch =
-        teacher.first_name &&
-        teacher.first_name.toLowerCase().includes(searchTerm);
-      const lastNameMatch =
-        teacher.last_name &&
-        teacher.last_name.toLowerCase().includes(searchTerm);
-      const subjectMatch =
-        teacher.subject_name &&
-        teacher.subject_name.toLowerCase().includes(searchTerm);
-      const roleMatch =
-        teacher.role_name &&
-        teacher.role_name.toLowerCase().includes(searchTerm);
-
-      const searchMatch =
-        codeMatch ||
-        firstNameMatch ||
-        lastNameMatch ||
-        subjectMatch ||
-        roleMatch;
-
-      // Subject filter
-      const subjectFilterMatch = !subject || teacher.subject_name === subject;
-
-      // Status filter
-      let statusFilterMatch = true;
-      if (status === "active") {
-        statusFilterMatch = teacher.active !== false;
-      } else if (status === "inactive") {
-        statusFilterMatch = teacher.active === false;
-      }
-
-      return searchMatch && subjectFilterMatch && statusFilterMatch;
-    });
-
-    // Apply sorting if set
-    if (currentSort.field) {
-      sortTeachers();
-    }
-
-    // Reset to first page
-    currentPage = 1;
-
-    // Render table and pagination
-    renderTeachersTable();
-    renderPagination();
-  } catch (error) {
-    console.error("Error applying filters:", error);
-  }
-}
-
-// Sort teachers based on current sort field and direction
-function sortTeachers() {
-  if (!currentSort.field) return;
-
-  filteredTeachers.sort((a, b) => {
-    let valueA = a[currentSort.field];
-    let valueB = b[currentSort.field];
-
-    // Handle nulls/undefined
-    if (valueA === null || valueA === undefined) valueA = "";
-    if (valueB === null || valueB === undefined) valueB = "";
-
-    // Handle numeric values
-    if (!isNaN(valueA) && !isNaN(valueB)) {
-      valueA = Number(valueA);
-      valueB = Number(valueB);
-    }
-
-    // Handle dates
-    if (
-      currentSort.field === "birth_date" ||
-      currentSort.field === "effective_date"
-    ) {
-      valueA = valueA ? new Date(valueA).getTime() : 0;
-      valueB = valueB ? new Date(valueB).getTime() : 0;
-    }
-
-    // String comparison for text
-    if (typeof valueA === "string" && typeof valueB === "string") {
-      // Use localeCompare for proper string comparison in Arabic
-      return currentSort.direction === "asc"
-        ? valueA.localeCompare(valueB, "ar")
-        : valueB.localeCompare(valueA, "ar");
-    }
-
-    // Standard comparison for numbers and dates
-    if (currentSort.direction === "asc") {
-      return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
+      console.groupEnd();
     } else {
-      return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
+      console.log(`${icon} [${timestamp}] ${message}`, data);
     }
-  });
+  } else {
+    console.log(`${icon} [${timestamp}] ${message}`);
+  }
 }
 
-// Map table index to field name for sorting
-function getFieldFromIndex(index) {
-  const fieldMap = {
-    1: "registration_id",
-    2: "last_name",
-    3: "first_name",
-    4: "birth_date",
-    5: "role_name",
-    6: "subject_name",
-    7: "level",
-    8: "start_date",
-  };
-  return fieldMap[index];
-}
+// Initialize when DOM is loaded
+document.addEventListener("DOMContentLoaded", async () => {
+  debugLog("DOM loaded, starting initialization...");
+  await initialize();
+  debugLog("Initialization complete");
+});
 
-// Render teachers table
-function renderTeachersTable() {
+// Initialize the page
+async function initialize() {
   try {
-    teachersTableBody.innerHTML = "";
+    debugLog("Starting page initialization");
 
-    if (filteredTeachers.length === 0) {
-      const noDataRow = document.createElement("tr");
-      noDataRow.innerHTML = `<td colspan="10" class="no-data">
-        <i class="fas fa-info-circle"></i>
-        <p>لا توجد بيانات للعرض</p>
-      </td>`;
-      teachersTableBody.appendChild(noDataRow);
+    // Check Excel-related elements
+    const elements = {
+      fileInput: document.getElementById("excelFile"),
+      uploadBtn: document.getElementById("fileUploadBtn"),
+      previewSection: document.getElementById("previewSection"),
+      previewTable: document.getElementById("previewTable"),
+      recordCount: document.getElementById("recordCount"),
+      uploadDataBtn: document.getElementById("uploadBtn"),
+      cancelBtn: document.getElementById("cancelBtn"),
+    };
+
+    debugLog("Element check results:", elements);
+
+    // Load initial data
+    await fetchAndDisplayTeachers();
+    setupFileUpload();
+    setupPagination();
+
+    debugLog("Page initialization completed successfully");
+  } catch (error) {
+    console.error("❌ Initialization error:", error);
+    showNotification("حدث خطأ أثناء تهيئة الصفحة", "error");
+  }
+}
+
+// Firebase references
+
+// Load teachers from Firebase
+async function fetchAndDisplayTeachers() {
+  try {
+    debugLog("📥 Fetching teachers from Firebase...", null, "FIREBASE");
+
+    const snapshot = await teachersRef.get();
+
+    // Log Firebase data in console
+    console.group("🔥 Firebase Teachers Collection");
+    console.log("Collection Path: /teachers");
+    console.log(`Total Documents: ${snapshot.size}`);
+
+    const teachersArray = [];
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      // Convert Timestamps to readable dates
+      const createdAt = data.createdAt?.toDate().toISOString();
+      const updatedAt = data.updatedAt?.toDate().toISOString();
+
+      console.group(`📄 Document ID: ${doc.id}`);
+      const teacherData = {
+        id: doc.id,
+        birth_date: data.birth_date || "",
+        createdAt: createdAt || "",
+        first_name: data.first_name || "",
+        isActive: data.isActive ?? true,
+        last_name: data.last_name || "",
+        level: data.level || "",
+        registration_id: data.registration_id || "",
+        role_ref: data.role_ref?.path || "",
+        start_date: data.start_date || "",
+        subject_ref: data.subject_ref?.path || "",
+        updatedAt: updatedAt || "",
+      };
+
+      console.table(teacherData);
+      teachersArray.push(teacherData);
+      console.groupEnd();
+    });
+    console.groupEnd();
+
+    // Log the full array of teachers
+    console.group("📊 Teachers Data Array");
+    console.table(teachersArray);
+    console.groupEnd();
+
+    // Clear existing data
+    teachersData = teachersArray;
+    const tableBody = document.querySelector("#teachersTable tbody");
+    if (!tableBody) {
+      console.error("❌ Teachers table body not found");
       return;
     }
 
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, filteredTeachers.length);
-    const displayedTeachers = filteredTeachers.slice(startIndex, endIndex);
+    if (snapshot.empty) {
+      console.log("❌ No teachers found in database");
+      console.groupEnd();
+      updateStats(0, 0, 0);
+      tableBody.innerHTML =
+        '<tr><td colspan="9" class="text-center">لا توجد بيانات</td></tr>';
+      return;
+    }
 
-    displayedTeachers.forEach((teacher) => {
-      const row = document.createElement("tr");
+    let activeCount = 0;
+    let subjectsSet = new Set();
 
-      // Format birth date
-      let birthDate = formatDate(teacher.birth_date);
+    // Fetch reference data
+    const [subjectsSnapshot, rolesSnapshot] = await Promise.all([
+      subjectsRef.get(),
+      rolesRef.get(),
+    ]);
 
-      // Format the effective date
-      let effectiveDate = formatDate(teacher.start_date);
+    // Create maps for quick lookups
+    const subjectsMap = new Map();
+    const rolesMap = new Map();
 
-      // Create status badge
-      const statusBadge = `
-        <span class="status-badge ${teacher.active ? "active" : "inactive"}">
-          ${teacher.active ? "نشط" : "غير نشط"}
-        </span>
+    subjectsSnapshot.forEach((doc) => {
+      const data = doc.data();
+      subjectsMap.set(doc.id, data.name);
+      console.log(`📘 Subject: ${data.name} (${doc.id})`);
+    });
+
+    rolesSnapshot.forEach((doc) => {
+      const data = doc.data();
+      rolesMap.set(doc.id, data.name);
+      console.log(`👤 Role: ${data.name} (${doc.id})`);
+    });
+
+    // Build table HTML
+    let tableHTML = "";
+    teachersArray.forEach((teacher) => {
+      // Get role and subject names from references
+      const roleId = teacher.role_ref.split("/").pop();
+      const subjectId = teacher.subject_ref.split("/").pop();
+      const roleName = rolesMap.get(roleId) || "";
+      const subjectName = subjectsMap.get(subjectId) || "";
+
+      if (subjectName) {
+        subjectsSet.add(subjectName);
+      }
+      if (teacher.isActive) activeCount++;
+
+      tableHTML += `
+        <tr>
+          <td>
+            <div class="teacher-avatar">
+              ${
+                teacher.photoUrl
+                  ? `<img src="${teacher.photoUrl}" alt="${teacher.first_name}">`
+                  : '<i class="fas fa-user"></i>'
+              }
+            </div>
+          </td>
+          <td>${teacher.registration_id}</td>
+          <td>${teacher.last_name}</td>
+          <td>${teacher.first_name}</td>
+          <td>${formatDate(teacher.birth_date)}</td>
+          <td>${roleName}</td>
+          <td>${subjectName}</td>
+          <td>
+            <span class="status-badge ${
+              teacher.isActive ? "active" : "inactive"
+            }">
+              ${teacher.isActive ? "نشط" : "غير نشط"}
+            </span>
+          </td>
+          <td class="actions">
+            <button onclick="viewTeacher('${
+              teacher.id
+            }')" class="btn-icon" title="عرض">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button onclick="editTeacher('${
+              teacher.id
+            }')" class="btn-icon" title="تعديل">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button onclick="deleteTeacher('${
+              teacher.id
+            }')" class="btn-icon" title="حذف">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
       `;
+    });
 
-      row.innerHTML = `
-        <td><img src="../images/user-icon.png" alt="صورة" class="user-icon"></td>
+    // Update table content
+    tableBody.innerHTML = tableHTML;
+
+    // Log summary statistics
+    console.group("📈 Statistics");
+    console.table({
+      "Total Teachers": teachersArray.length,
+      "Active Teachers": activeCount,
+      "Unique Subjects": subjectsSet.size,
+    });
+    console.log("Subjects List:", Array.from(subjectsSet));
+    console.groupEnd();
+
+    debugLog(
+      `Processed ${teachersArray.length} teachers (${activeCount} active)`,
+      null,
+      "SUCCESS"
+    );
+    updateStats(teachersArray.length, activeCount, subjectsSet.size);
+
+    // Setup pagination
+    setupPagination();
+    updatePagination(teachersArray.length);
+  } catch (error) {
+    console.error("❌ Error loading teachers:", error);
+    debugLog(
+      "Error details",
+      {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+      },
+      "ERROR"
+    );
+    showNotification("حدث خطأ أثناء تحميل بيانات المعلمين", "error");
+  }
+}
+
+// Load reference data (subjects)
+async function loadReferenceData() {
+  try {
+    // Load subjects
+    const subjectsSnapshot = await db.collection("subjects").get();
+    const subjectFilter = document.getElementById("subjectFilter");
+
+    // Clear existing options except the first one
+    subjectFilter.innerHTML = '<option value="">جميع المواد</option>';
+
+    subjectsSnapshot.forEach((doc) => {
+      const data = doc.data();
+      const option = new Option(data.name, doc.id);
+      subjectFilter.add(option);
+    });
+
+    // Update subjects count
+    document.getElementById("totalSubjects").textContent =
+      subjectsSnapshot.size;
+  } catch (error) {
+    console.error("Error loading reference data:", error);
+    showNotification("حدث خطأ أثناء تحميل البيانات المرجعية", "error");
+  }
+}
+
+// Display teachers in table
+function displayTeachers(teachers) {
+  const tableBody = document.querySelector("#teachersTable tbody");
+  if (!tableBody) return;
+
+  if (teachers.length === 0) {
+    tableBody.innerHTML =
+      '<tr><td colspan="8" class="no-data">لا توجد بيانات</td></tr>';
+    return;
+  }
+
+  const start = (currentPage - 1) * pageSize;
+  const end = start + pageSize;
+  const paginatedTeachers = teachers.slice(start, end);
+
+  tableBody.innerHTML = paginatedTeachers
+    .map(
+      (teacher) => `
+        <tr>
+            <td>
+                <div class="teacher-avatar">
+                    ${
+                      teacher.photoUrl
+                        ? `<img src="${teacher.photoUrl}" alt="${teacher.first_name}">`
+                        : '<i class="fas fa-user"></i>'
+                    }
+                </div>
+            </td>
         <td>${teacher.registration_id || ""}</td>
         <td>${teacher.last_name || ""}</td>
         <td>${teacher.first_name || ""}</td>
-        <td>${birthDate}</td>
-        <td>${teacher.role_name || "أستاذ"}</td>
+            <td>${formatDate(teacher.birth_date) || ""}</td>
+            <td>${teacher.role_name || ""}</td>
         <td>${teacher.subject_name || ""}</td>
-        <td>${teacher.level || "0"}</td>
-        <td>${effectiveDate}</td>
-        <td>
-            <button class="action-btn edit-btn" data-id="${
-              teacher.id || teacher.registration_id || ""
-            }" title="تعديل">
+            <td>
+                <span class="status-badge ${
+                  teacher.isActive ? "active" : "inactive"
+                }">
+                    ${teacher.isActive ? "نشط" : "غير نشط"}
+                </span>
+            </td>
+            <td class="actions">
+                <button onclick="viewTeacher('${
+                  teacher.id
+                }')" class="btn-icon" title="عرض">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button onclick="editTeacher('${
+                  teacher.id
+                }')" class="btn-icon" title="تعديل">
               <i class="fas fa-edit"></i>
             </button>
-            <button class="action-btn delete-btn" data-id="${
-              teacher.id || teacher.registration_id || ""
-            }" title="حذف">
-              <i class="fas fa-trash-alt"></i>
+                <button onclick="deleteTeacher('${
+                  teacher.id
+                }')" class="btn-icon" title="حذف">
+                    <i class="fas fa-trash"></i>
             </button>
         </td>
-      `;
+        </tr>
+    `
+    )
+    .join("");
 
-      teachersTableBody.appendChild(row);
-    });
-
-    // Add event listeners to action buttons
-    addActionButtonListeners();
-  } catch (error) {
-    console.error("Error rendering teachers table:", error);
-    showNotification("حدث خطأ أثناء عرض بيانات المعلمين", "error");
-  }
+  updatePagination(teachers.length);
 }
 
-// Format date for display
-function formatDate(dateString) {
-  if (!dateString) return "";
-
-  try {
-    // Format to local date string (without time)
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ar-SA");
-  } catch (error) {
-    return dateString; // Fallback to original string if error
-  }
+// Update stats display
+function updateStats(total, active, subjects) {
+  document.getElementById("totalTeachers").textContent = total;
+  document.getElementById("activeTeachers").textContent = active;
+  document.getElementById("totalSubjects").textContent = subjects;
 }
 
-// Render pagination controls
-function renderPagination() {
-  try {
-    if (!pageNumbers) return;
+// Update pagination controls
+function updatePagination(totalItems) {
+  const totalPages = Math.ceil(totalItems / pageSize);
 
-    pageNumbers.innerHTML = "";
+  // Update page info text
+  const pageInfo = document.querySelector(".page-info");
+  if (pageInfo) {
+    pageInfo.textContent = `الصفحة ${currentPage} من ${totalPages}`;
+  }
 
-    // Calculate total pages
-    const totalPages = Math.ceil(filteredTeachers.length / pageSize);
+  // Update navigation buttons
+  const prevPageBtn = document.getElementById("prevPage");
+  const nextPageBtn = document.getElementById("nextPage");
 
-    // Update the page info
-    const pageInfoElement = document.querySelector(".pagination .page-info");
-    if (pageInfoElement) {
-      pageInfoElement.textContent = `الصفحة ${currentPage} من ${totalPages}`;
-    } else {
-      // Create page info element if it doesn't exist
-      const pageInfo = document.createElement("div");
-      pageInfo.className = "page-info";
-      pageInfo.textContent = `الصفحة ${currentPage} من ${totalPages}`;
+  if (prevPageBtn) {
+    prevPageBtn.disabled = currentPage === 1;
+    prevPageBtn.classList.toggle("disabled", currentPage === 1);
+  }
 
-      // Insert after the page numbers
-      if (pageNumbers.parentNode) {
-        pageNumbers.parentNode.insertBefore(pageInfo, pageNumbers.nextSibling);
-      }
-    }
+  if (nextPageBtn) {
+    nextPageBtn.disabled = currentPage === totalPages;
+    nextPageBtn.classList.toggle("disabled", currentPage === totalPages);
+  }
 
-    // Enable/disable prev/next buttons
-    if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
-    if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
+  // Update page numbers
+  const pageNumbers = document.getElementById("pageNumbers");
+  if (pageNumbers) {
+    let pagesHtml = "";
+    const maxPages = 5; // Show maximum 5 page numbers
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, startPage + maxPages - 1);
 
-    // Generate page numbers
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, startPage + 4);
-
-    // Adjust if we're near the end
-    if (endPage - startPage < 4) {
-      startPage = Math.max(1, endPage - 4);
-    }
-
-    // Create page number elements
     for (let i = startPage; i <= endPage; i++) {
-      const pageNum = document.createElement("button");
-      pageNum.classList.add("page-number");
+      pagesHtml += `<button class="page-number ${
+        i === currentPage ? "active" : ""
+      }" 
+        data-page="${i}">${i}</button>`;
+    }
+    pageNumbers.innerHTML = pagesHtml;
 
-      if (i === currentPage) {
-        pageNum.classList.add("active");
-      }
-
-      pageNum.textContent = i;
-      pageNum.addEventListener("click", () => {
-        currentPage = i;
-        renderTeachersTable();
-        renderPagination();
+    // Add click handlers to page numbers
+    const pageButtons = pageNumbers.querySelectorAll(".page-number");
+    pageButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        currentPage = parseInt(button.dataset.page);
+        displayTeachers(teachersData);
       });
-
-      pageNumbers.appendChild(pageNum);
-    }
-  } catch (error) {
-    console.error("Error rendering pagination:", error);
+    });
   }
+
+  debugLog(`Pagination updated: Page ${currentPage} of ${totalPages}`);
 }
 
-// Add event listeners to action buttons
-function addActionButtonListeners() {
-  // Edit buttons
-  document.querySelectorAll(".edit-btn").forEach((button) => {
-    button.addEventListener("click", (e) => {
-      const teacherId = e.currentTarget.getAttribute("data-id");
-      openEditTeacherModal(teacherId);
-    });
-  });
+// Add pagination event listeners
+function setupPagination() {
+  const prevPageBtn = document.getElementById("prevPage");
+  const nextPageBtn = document.getElementById("nextPage");
 
-  // Delete buttons
-  document.querySelectorAll(".delete-btn").forEach((button) => {
-    button.addEventListener("click", (e) => {
-      const teacherId = e.currentTarget.getAttribute("data-id");
-      if (confirm("هل أنت متأكد من حذف هذا المعلم؟")) {
-        deleteTeacher(teacherId);
+  if (prevPageBtn) {
+    prevPageBtn.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        displayTeachers(teachersData);
       }
     });
-  });
-}
-
-// Open add teacher modal
-function openAddTeacherModal() {
-    isEditMode = false;
-    modalTitle.textContent = "إضافة معلم جديد";
-  teacherForm.reset();
-    teacherId.value = "";
-    teacherStatus.value = "active";
-
-  // Make sure reference data is loaded for dropdowns
-  if (!subjects.length || !roles.length) {
-    loadReferenceData();
   }
 
-    teacherModal.style.display = "block";
-}
-
-// Open edit teacher modal
-function openEditTeacherModal(id) {
-  isEditMode = true;
-  modalTitle.textContent = "تعديل بيانات المعلم";
-
-  // Find teacher by ID
-  const teacher = teachers.find((t) => t.id == id || t.registration_id == id);
-
-    if (!teacher) {
-    showNotification("لم يتم العثور على بيانات المعلم", "error");
-      return;
-    }
-
-  // Ensure reference data is loaded
-  if (!subjects.length || !roles.length) {
-    loadReferenceData().then(() => populateFormWithTeacher(teacher));
-  } else {
-    populateFormWithTeacher(teacher);
-  }
-
-  // Show modal
-  teacherModal.style.display = "block";
-}
-
-// Populate form with teacher data
-function populateFormWithTeacher(teacher) {
-  // Populate form fields
-  teacherId.value = teacher.id || teacher.registration_id || "";
-  teacherName.value = `${teacher.first_name || ""} ${teacher.last_name || ""}`;
-
-  // Handle subject dropdown
-  const teacherSubjectDropdown = document.getElementById("teacherSubject");
-  if (teacherSubjectDropdown) {
-    // Find and select the matching subject option
-    let subjectFound = false;
-    for (let i = 0; i < teacherSubjectDropdown.options.length; i++) {
-      if (teacherSubjectDropdown.options[i].value === teacher.subject_name) {
-        teacherSubjectDropdown.selectedIndex = i;
-        subjectFound = true;
-        break;
+  if (nextPageBtn) {
+    nextPageBtn.addEventListener("click", () => {
+      const totalPages = Math.ceil(teachersData.length / pageSize);
+      if (currentPage < totalPages) {
+        currentPage++;
+        displayTeachers(teachersData);
       }
-    }
-
-    // If no match found, add the subject as a new option
-    if (!subjectFound && teacher.subject_name) {
-      const option = document.createElement("option");
-      option.value = teacher.subject_name;
-      option.textContent = teacher.subject_name;
-      teacherSubjectDropdown.appendChild(option);
-      teacherSubjectDropdown.value = teacher.subject_name;
-    }
-  }
-
-  // Handle role dropdown
-  const teacherRoleDropdown = document.getElementById("teacherRole");
-  if (teacherRoleDropdown) {
-    // Find and select the matching role option
-    let roleFound = false;
-    for (let i = 0; i < teacherRoleDropdown.options.length; i++) {
-      if (teacherRoleDropdown.options[i].value === teacher.role_name) {
-        teacherRoleDropdown.selectedIndex = i;
-        roleFound = true;
-        break;
-      }
-    }
-
-    // If no match found, add the role as a new option
-    if (!roleFound && teacher.role_name) {
-      const option = document.createElement("option");
-      option.value = teacher.role_name;
-      option.textContent = teacher.role_name;
-      teacherRoleDropdown.appendChild(option);
-      teacherRoleDropdown.value = teacher.role_name;
-    }
-  }
-
-    teacherStatus.value = teacher.active !== false ? "active" : "inactive";
-    teacherPhone.value = teacher.phone || "";
-    teacherEmail.value = teacher.email || "";
-}
-
-// Close modal
-function closeModal() {
-  teacherModal.style.display = "none";
-}
-
-// Save teacher (add or update)
-async function saveTeacher(event) {
-  event.preventDefault();
-
-  try {
-    // Split the full name into first and last name
-    const fullName = teacherName.value.trim();
-    let firstName = "",
-      lastName = "";
-
-    if (fullName.includes(" ")) {
-      const nameParts = fullName.split(" ");
-      firstName = nameParts[0];
-      lastName = nameParts.slice(1).join(" ");
-    } else {
-      firstName = fullName;
-    }
-
-    // Get form data
-    const data = {
-      first_name: firstName,
-      last_name: lastName,
-      subject_name: document.getElementById("teacherSubject").value,
-      role_name: document.getElementById("teacherRole").value,
-      active: teacherStatus.value === "active",
-      phone: teacherPhone.value,
-      email: teacherEmail.value,
-    };
-
-    let result;
-
-    if (isEditMode) {
-      // Update existing teacher
-      const id = teacherId.value;
-      result = await window.db.update(
-        `${window.API_CONFIG.TEACHERS}/${id}`,
-        data
-      );
-
-      if (result && result.success) {
-        showNotification("تم تحديث بيانات المعلم بنجاح", "success");
-
-        // Update teacher in the local array
-        const index = teachers.findIndex(
-          (t) => t.id == id || t.registration_id == id
-        );
-        if (index !== -1) {
-          teachers[index] = { ...teachers[index], ...data };
-        }
-      } else {
-        throw new Error(result.error || "Failed to update teacher");
-      }
-    } else {
-      // Add new teacher
-      result = await window.db.add(window.API_CONFIG.TEACHERS, data);
-
-      if (result && result.success) {
-        showNotification("تم إضافة المعلم بنجاح", "success");
-
-        // Add the new teacher to the local array
-        teachers.push({ ...data, id: result.id });
-      } else {
-        throw new Error(result.error || "Failed to add teacher");
-      }
-    }
-
-    // Close modal and refresh data
-    closeModal();
-    updateStats();
-    loadSubjectFilters();
-    applyFilters();
-  } catch (error) {
-    console.error("Error saving teacher:", error);
-    showNotification("حدث خطأ أثناء حفظ بيانات المعلم", "error");
+    });
   }
 }
 
-// Delete teacher
-async function deleteTeacher(id) {
-  try {
-    const result = await window.db.delete(
-      `${window.API_CONFIG.TEACHERS}/${id}`
-    );
-
-    if (result) {
-      showNotification("تم حذف المعلم بنجاح", "success");
-
-      // Remove teacher from local array
-      teachers = teachers.filter((t) => t.id != id && t.registration_id != id);
-
-      // Refresh data
-      updateStats();
-      loadSubjectFilters();
-      applyFilters();
-    }
-  } catch (error) {
-    console.error("Error deleting teacher:", error);
-    showNotification("حدث خطأ أثناء حذف المعلم", "error");
-  }
-}
-
-// Handle file upload button click
-function handleFileUploadBtnClick() {
-  console.log("File upload button clicked");
-
-  // Get the file input element again to ensure we have it
-  const fileInput = document.getElementById("excelFile");
-
-  if (!fileInput) {
-    console.error("Excel file input not found in DOM");
-    showNotification("تعذر فتح نافذة اختيار الملف", "error");
-      return;
-    }
-
-  console.log("Clicking the file input element");
-  fileInput.click();
-}
-
-// Process Excel file
-async function handleFileChange(event) {
-  console.log("File input change event triggered");
-
-  if (!event) {
-    console.error("No event object provided to handleFileChange");
-    return;
-  }
-
-  if (!event.target) {
-    console.error("Event has no target property", event);
-    return;
-  }
-
-  if (!event.target.files) {
-    console.error("Event target has no files property", event.target);
-    return;
-  }
-
+// Handle file selection with enhanced debugging
+function handleFileSelect(event) {
   const file = event.target.files[0];
   if (!file) {
-    console.log("No file selected");
+    debugLog("❌ No file selected");
     return;
   }
 
-  try {
-    console.log(
-      "Processing Excel file:",
-      file.name,
-      "type:",
-      file.type,
-      "size:",
-      file.size,
-      "bytes"
-    );
-    showNotification("جاري تحليل ملف Excel...", "info");
-
-    // Update selected file name in UI if element exists
-    const fileNameElement = document.getElementById("selectedFileName");
-    if (fileNameElement) {
-      fileNameElement.textContent = file.name;
-      console.log("Updated file name display:", file.name);
-    } else {
-      console.warn("selectedFileName element not found in DOM");
-    }
-
-    const data = await readExcelFile(file);
-    console.log("Excel data parsed:", data ? data.length : 0, "records");
-
-    if (!data || data.length === 0) {
-      console.error("No valid data found in Excel file");
-      showNotification("الملف لا يحتوي على بيانات صالحة", "error");
-      return;
-    }
-
-    // Store data for later processing
-    currentFileData = data;
-
-    // Log first few records for debugging
-    console.log("Sample data:", data.slice(0, 2));
-
-    // Show preview
-    showPreview(data);
-  } catch (error) {
-    console.error("Error handling Excel file:", error);
-    showNotification(
-      "حدث خطأ أثناء قراءة ملف Excel: " + error.message,
-      "error"
-    );
-  }
-}
-
-// Read Excel file
-function readExcelFile(file) {
-  return new Promise((resolve, reject) => {
-    console.log(`Reading Excel file: ${file.name} (${file.size} bytes)`);
-
-    // Validate file type
-    const validTypes = [
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/octet-stream", // Some browsers may use this for Excel files
-    ];
-
-    if (!validTypes.includes(file.type)) {
-      console.warn(`Potentially unsupported file type: ${file.type}`);
-      // Continue anyway, but log the warning
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-      try {
-        console.log("File read successfully, processing data...");
-        const data = e.target.result;
-
-        // Check if XLSX is available
-        if (typeof XLSX === "undefined") {
-          console.error("XLSX library not loaded!");
-          reject(
-            new Error("XLSX library not loaded. Please check script inclusion.")
-          );
-          return;
-        }
-
-        try {
-          console.log("Parsing Excel file using XLSX...");
-          const workbook = XLSX.read(data, { type: "binary" });
-          console.log("Workbook sheets:", workbook.SheetNames);
-
-          if (workbook.SheetNames.length === 0) {
-            console.error("Excel file contains no sheets");
-            reject(new Error("Excel file contains no sheets"));
-            return;
-          }
-
-          const firstSheet = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheet];
-
-          // Read the original data as array of arrays to handle the special structure
-          console.log("Converting worksheet to array format...");
-          const rawData = XLSX.utils.sheet_to_json(worksheet, {
-            header: 1, // Use numeric indexing
-          raw: false,
-            defval: "", // Default empty cells to empty string
-          });
-
-          console.log("Raw data rows:", rawData.length);
-
-          // Skip the first 3 rows and use the 4th row as headers
-          if (rawData.length < 4) {
-            console.error(
-              "Excel file doesn't have enough rows for the expected structure"
-            );
-            reject(
-              new Error("Excel file format is not valid - not enough rows")
-            );
-            return;
-          }
-
-          // Get the headers from the 4th row (index 3)
-          const headers = rawData[3];
-          console.log("Using row 4 as headers:", headers);
-
-          // Process the data starting from row 5 (index 4)
-          const processedData = [];
-          for (let i = 4; i < rawData.length; i++) {
-            const row = rawData[i];
-            // Skip empty rows
-            if (row.every((cell) => cell === "")) continue;
-
-            const rowData = {};
-            // Map each cell to its corresponding header
-            headers.forEach((header, index) => {
-              if (header && header.trim() !== "") {
-                rowData[header] = row[index] || "";
-              }
-            });
-
-            // Add the processed row if it has any non-empty values
-            if (Object.values(rowData).some((val) => val !== "")) {
-              processedData.push(rowData);
-            }
-          }
-
-          console.log("Processed data:", processedData.length, "records");
-          if (processedData.length > 0) {
-            console.log("First processed record:", processedData[0]);
-          }
-
-          resolve(processedData);
-        } catch (xlsxError) {
-          console.error("Error in XLSX processing:", xlsxError);
-          reject(xlsxError);
-        }
-      } catch (error) {
-        console.error("Error parsing Excel:", error);
-        reject(error);
-      }
-    };
-
-    reader.onerror = function (error) {
-      console.error("FileReader error:", error);
-      reject(new Error("Could not read the file"));
-    };
-
-    console.log("Starting to read file as binary string");
-    reader.readAsBinaryString(file);
+  debugLog("📁 File selected:", {
+    name: file.name,
+    type: file.type,
+    size: `${(file.size / 1024).toFixed(2)} KB`,
   });
-}
 
-// Show preview of the imported data
-function showPreview(data) {
-  if (!data || data.length === 0) {
-    showNotification("لا توجد بيانات للعرض", "warning");
-    return;
+  const fileNameElement = document.getElementById("selectedFileName");
+  if (fileNameElement) {
+    fileNameElement.textContent = file.name;
+    debugLog("Updated file name display");
   }
 
-  // Get headers from the first record
-  const headers = Object.keys(data[0]);
+  const reader = new FileReader();
 
-  // Update record count
-  recordCount.textContent = data.length;
+  reader.onload = function (e) {
+    debugLog("📖 File read complete, starting processing");
 
-  // Create table header
+    try {
+      debugLog("Parsing Excel file...");
+      const workbook = XLSX.read(e.target.result, { type: "binary" });
+      debugLog("Workbook sheets found:", workbook.SheetNames);
+
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      debugLog("Processing first sheet:", workbook.SheetNames[0]);
+
+      // Get all data including empty rows
+      const rawData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+      debugLog(`Raw data contains ${rawData.length} rows`);
+
+      // Find the header row - look for row containing "الرمز الوظيفي"
+      let headerRowIndex = -1;
+      for (let i = 0; i < rawData.length; i++) {
+        if (
+          rawData[i].some(
+            (cell) => cell && cell.toString().includes("الرمز الوظيفي")
+          )
+        ) {
+          headerRowIndex = i;
+          break;
+        }
+      }
+
+      if (headerRowIndex === -1) {
+        throw new Error("لم يتم العثور على صف العناوين في الملف");
+      }
+
+      debugLog(`Found header row at index ${headerRowIndex}`);
+
+      // Clean up headers - remove extra spaces and normalize
+      const headers = rawData[headerRowIndex].map((header) =>
+        header ? header.toString().trim() : ""
+      );
+      debugLog("Cleaned headers:", headers);
+
+      const data = [];
+      for (let i = headerRowIndex + 1; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (!row || row.length === 0 || row.every((cell) => !cell)) {
+          debugLog(`Skipping empty row at index ${i}`);
+          continue;
+        }
+
+        const record = {};
+        headers.forEach((header, index) => {
+          if (header) {
+            let value = row[index];
+            // Convert Excel dates to proper format
+            if (header === "تاريخ الازدياد" || header === "تاريخ السريان") {
+              if (value) {
+                try {
+                  value = XLSX.SSF.parse_date_code(value);
+                  value = new Date(Date.UTC(value.y, value.m - 1, value.d));
+                  value = value.toISOString().split("T")[0];
+                } catch (e) {
+                  debugLog(
+                    `Failed to parse date in row ${i + 1}, column ${header}`,
+                    e
+                  );
+                }
+              }
+            }
+            record[header] = value;
+          }
+        });
+
+        // Only add record if it has at least one non-empty value
+        if (Object.values(record).some((val) => val)) {
+          data.push(record);
+        }
+      }
+
+      debugLog(`Processed ${data.length} valid records`);
+      if (data.length > 0) {
+        debugLog("Sample record:", data[0]);
+      }
+
+      excelData = data;
+      showPreview(headers, data.slice(0, 5));
+    } catch (error) {
+      console.error("❌ Excel parsing error:", error);
+      showNotification("حدث خطأ أثناء معالجة ملف Excel", "error");
+    }
+  };
+
+  reader.onerror = function (error) {
+    console.error("❌ File reading error:", error);
+    showNotification("حدث خطأ أثناء قراءة الملف", "error");
+  };
+
+  debugLog("Starting file read operation");
+  reader.readAsBinaryString(file);
+}
+
+// Show preview of Excel data
+function showPreview(headers, data) {
+  const previewSection = document.getElementById("previewSection");
+  const previewTable = document.getElementById("previewTable");
+  const recordCount = document.getElementById("recordCount");
+
+  if (!previewSection || !previewTable || !recordCount) return;
+
+  recordCount.textContent = excelData.length;
+
   let tableHTML = "<thead><tr>";
   headers.forEach((header) => {
     tableHTML += `<th>${header}</th>`;
   });
-  tableHTML += "</tr></thead>";
+  tableHTML += "</tr></thead><tbody>";
 
-  // Create table body
-  tableHTML += "<tbody>";
-  data.slice(0, 10).forEach((row) => {
-    // Show only first 10 rows for preview
+  data.forEach((row) => {
     tableHTML += "<tr>";
     headers.forEach((header) => {
       tableHTML += `<td>${row[header] || ""}</td>`;
     });
     tableHTML += "</tr>";
   });
+
   tableHTML += "</tbody>";
-
-  // Set table content
   previewTable.innerHTML = tableHTML;
-
-  // Show preview section
   previewSection.style.display = "block";
 }
 
-// Process teacher data from Excel
-async function processTeacherData() {
-  if (!currentFileData || currentFileData.length === 0) {
-    showNotification("لا توجد بيانات للمعالجة", "error");
-    return;
+// CRUD Operations
+async function viewTeacher(id) {
+  window.location.href = `teacher-profile.html?id=${id}`;
+}
+
+async function editTeacher(id) {
+  try {
+    const doc = await db.collection("teachers").doc(id).get();
+    if (doc.exists) {
+      const teacher = doc.data();
+      // Open edit modal and populate form
+      openTeacherModal(teacher);
+    }
+  } catch (error) {
+    console.error("Error loading teacher data:", error);
+    showNotification("حدث خطأ أثناء تحميل بيانات المعلم", "error");
+  }
+}
+
+async function deleteTeacher(id) {
+  if (confirm("هل أنت متأكد من حذف هذا المعلم؟")) {
+    try {
+      await db.collection("teachers").doc(id).delete();
+      showNotification("تم حذف المعلم بنجاح", "success");
+      await fetchAndDisplayTeachers();
+    } catch (error) {
+      console.error("Error deleting teacher:", error);
+      showNotification("حدث خطأ أثناء حذف المعلم", "error");
+    }
+  }
+}
+
+// Setup event listeners for search and filter
+document.getElementById("searchInput")?.addEventListener("input", (e) => {
+  const searchTerm = e.target.value.toLowerCase();
+  const filteredTeachers = teachersData.filter(
+    (teacher) =>
+      teacher.first_name?.toLowerCase().includes(searchTerm) ||
+      teacher.last_name?.toLowerCase().includes(searchTerm) ||
+      teacher.registration_id?.toLowerCase().includes(searchTerm)
+  );
+  displayTeachers(filteredTeachers);
+});
+
+document
+  .getElementById("subjectFilter")
+  ?.addEventListener("change", filterTeachers);
+document
+  .getElementById("statusFilter")
+  ?.addEventListener("change", filterTeachers);
+
+function filterTeachers() {
+  const subjectFilter = document.getElementById("subjectFilter").value;
+  const statusFilter = document.getElementById("statusFilter").value;
+
+  let filtered = [...teachersData];
+
+  if (subjectFilter) {
+    filtered = filtered.filter(
+      (teacher) => teacher.subject_name === subjectFilter
+    );
   }
 
-  showLoading(true);
+  if (statusFilter) {
+    filtered = filtered.filter(
+      (teacher) =>
+        (statusFilter === "active" && teacher.isActive) ||
+        (statusFilter === "inactive" && !teacher.isActive)
+    );
+  }
+
+  displayTeachers(filtered);
+}
+
+// Initialize reference data from Excel
+async function initializeReferenceData(data) {
+  try {
+    debugLog("Initializing reference data from Excel data");
+
+    // Extract unique subjects and roles
+    const subjects = new Set();
+    const roles = new Set();
+
+    data.forEach((row) => {
+      if (row["المادة"]) subjects.add(row["المادة"].trim());
+      if (row["الرتبة"]) roles.add(row["الرتبة"].trim());
+    });
+
+    debugLog("Extracted reference data:", {
+      subjects: Array.from(subjects),
+      roles: Array.from(roles),
+    });
+
+    // Create subjects that don't exist
+    const subjectsBatch = db.batch();
+    const existingSubjects = new Set();
+
+    const subjectsSnapshot = await subjectsRef.get();
+    subjectsSnapshot.forEach((doc) => existingSubjects.add(doc.data().name));
+
+    for (const subject of subjects) {
+      if (!existingSubjects.has(subject)) {
+        const docRef = subjectsRef.doc();
+        subjectsBatch.set(docRef, {
+          name: subject,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        debugLog(`Added new subject: ${subject}`);
+      }
+    }
+
+    // Create roles that don't exist
+    const rolesBatch = db.batch();
+    const existingRoles = new Set();
+
+    const rolesSnapshot = await rolesRef.get();
+    rolesSnapshot.forEach((doc) => existingRoles.add(doc.data().name));
+
+    for (const role of roles) {
+      if (!existingRoles.has(role)) {
+        const docRef = rolesRef.doc();
+        rolesBatch.set(docRef, {
+          name: role,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        debugLog(`Added new role: ${role}`);
+      }
+    }
+
+    // Commit both batches
+    await Promise.all([subjectsBatch.commit(), rolesBatch.commit()]);
+
+    debugLog("Reference data initialized successfully from Excel data");
+    return true;
+  } catch (error) {
+    console.error("Error initializing reference data:", error);
+    showNotification("حدث خطأ أثناء تهيئة البيانات المرجعية", "error");
+    return false;
+  }
+}
+
+// Process Excel data with enhanced validation and error handling
+async function processTeacherData(data) {
+  debugLog(`🔄 Processing ${data.length} Excel records for teacher creation`);
+
+  const processedData = [];
+  let validRecords = 0;
+  let invalidRecords = 0;
+  let errors = [];
+  let creationSummary = {
+    attempted: 0,
+    successful: 0,
+    failed: 0,
+    existingUpdated: 0,
+  };
 
   try {
-    console.log(
-      "Starting to process Excel file with",
-      currentFileData.length,
-      "records"
+    // Initialize reference data first
+    const refDataInitialized = await initializeReferenceData(data);
+    if (!refDataInitialized) {
+      showNotification("فشل في تهيئة البيانات المرجعية", "error");
+      return;
+    }
+
+    // Get all existing registration IDs to check for duplicates
+    const existingTeachers = await teachersRef.get();
+    const existingIds = new Set();
+    existingTeachers.forEach((doc) =>
+      existingIds.add(doc.data().registration_id)
     );
 
-    // Prepare data for backend processing
-    const processedData = [];
+    // Create maps for quick reference data lookup
+    const subjectsMap = new Map();
+    const rolesMap = new Map();
 
-    // Process all records
-    for (let i = 0; i < currentFileData.length; i++) {
-      const record = currentFileData[i];
+    const [subjectsSnapshot, rolesSnapshot] = await Promise.all([
+      subjectsRef.get(),
+      rolesRef.get(),
+    ]);
 
-      console.log("Original record:", record);
+    subjectsSnapshot.forEach((doc) =>
+      subjectsMap.set(doc.data().name, doc.ref)
+    );
+    rolesSnapshot.forEach((doc) => rolesMap.set(doc.data().name, doc.ref));
 
-      // Map Arabic column names to English field names, accounting for spaces in column names
-      const processedRecord = {
-        registration_id:
-          record["رقم التعريف"] ||
-          record["الرمز الوظيفي"] ||
-          record["الرمز الوظيفي "] || // Note the added space
-          record["معرف المعلم"],
-        first_name:
-          record["الاسم"] ||
-          record["الاسم "] ||
-          record["اسم المعلم"] ||
-          record["الاسم الاول"],
-        last_name:
-          record["اللقب"] ||
-          record["اللقب "] ||
-          record["لقب المعلم"] ||
-          record["اسم العائلة"],
-        gender: record["الجنس"] || record["النوع"],
-        birth_date:
-          record["تاريخ الازدياد"] ||
-          record["تاريخ الازدياد "] || // Note the added space
-          record["تاريخ الميلاد"] ||
-          record["تاريخ الولادة"],
-        role_name:
-          record["الرتبة"] ||
-          record["الرتبة "] ||
-          record["المنصب"] ||
-          record["الوظيفة"],
-        subject_name:
-          record["المادة"] || record["المادة "] || record["مادة التدريس"],
-        level: record["الدرجة"] || record["الدرجة "] || record["المستوى"],
-        start_date:
-          record["تاريخ السريان"] ||
-          record["تاريخ السريان "] || // Note the added space
-          record["تاريخ التثبيت"] ||
-          record["تاريخ البدء"],
-        phone: record["الهاتف"] || record["رقم الهاتف"],
-        email: record["البريد الإلكتروني"] || record["الايميل"],
-      };
+    // Process each record
+    for (const row of data) {
+      try {
+        const registration_id = row["الرمز الوظيفي"]?.toString().trim();
 
-      console.log(
-        `Record ${i + 1}/${currentFileData.length}:`,
-        processedRecord
-      );
+        // Skip if this teacher already exists
+        if (existingIds.has(registration_id)) {
+          debugLog(
+            `⚠️ Teacher with ID ${registration_id} already exists, skipping`
+          );
+          creationSummary.existingUpdated++;
+          continue;
+        }
 
-      // More lenient validation - consider a record valid if it has any identifying information
-      if (
-        processedRecord.registration_id ||
-        processedRecord.first_name ||
-        processedRecord.last_name ||
-        (processedRecord.role_name && processedRecord.subject_name)
-      ) {
-        processedData.push(processedRecord);
-        } else {
-        console.warn(
-          `Skipping record ${i + 1} due to missing required fields:`,
-          record
+        const teacherData = {
+          registration_id,
+          first_name: row["الاسم"]?.toString().trim(),
+          last_name: row["اللقب"]?.toString().trim(),
+          birth_date: row["تاريخ الازدياد"] || "",
+          role_ref: row["الرتبة"] ? rolesMap.get(row["الرتبة"].trim()) : null,
+          subject_ref: row["المادة"]
+            ? subjectsMap.get(row["المادة"].trim())
+            : null,
+          level: row["الدرجة"]?.toString().trim(),
+          start_date: row["تاريخ السريان"] || "",
+          isActive: true,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+
+        // Validate required fields
+        const missingFields = [];
+        if (!teacherData.registration_id) missingFields.push("الرمز الوظيفي");
+        if (!teacherData.first_name) missingFields.push("الاسم");
+        if (!teacherData.last_name) missingFields.push("اللقب");
+        if (!teacherData.role_ref) missingFields.push("الرتبة");
+        if (!teacherData.subject_ref) missingFields.push("المادة");
+
+        if (missingFields.length > 0) {
+          debugLog(
+            `❌ Invalid record - missing fields: ${missingFields.join(", ")}`
+          );
+          invalidRecords++;
+          errors.push(
+            `Record ${
+              validRecords + invalidRecords
+            }: Missing ${missingFields.join(", ")}`
+          );
+          continue;
+        }
+
+        processedData.push(teacherData);
+        validRecords++;
+        debugLog(`✅ Valid record processed: ${teacherData.registration_id}`);
+      } catch (error) {
+        console.error(`❌ Error processing record:`, error);
+        invalidRecords++;
+        errors.push(
+          `Record ${validRecords + invalidRecords}: ${error.message}`
         );
       }
     }
 
-    console.log(
-      `Processed ${processedData.length} valid records out of ${currentFileData.length} total`
-    );
-
     if (processedData.length === 0) {
-      showLoading(false);
-      showNotification("لا توجد بيانات صالحة للإدخال", "error");
+      showNotification("لم يتم العثور على بيانات صالحة للرفع", "warning");
       return;
     }
 
-    // Send data to the server
-    console.log("Sending data to server:", processedData);
-    const response = await fetch(
-      `${window.API_CONFIG.BASE_URL}${window.API_CONFIG.TEACHER_IMPORT}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ teachers: processedData }),
-      }
-    );
+    // Upload to Firebase in batches of 500 (Firestore limit)
+    debugLog("🔄 Starting Firebase batch upload...");
+    const batchSize = 500;
+    const batches = [];
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Server error: ${response.status} ${errorText}`);
+    for (let i = 0; i < processedData.length; i += batchSize) {
+      const batch = db.batch();
+      const chunk = processedData.slice(i, i + batchSize);
+
+      chunk.forEach((teacher, index) => {
+        debugLog(
+          `Preparing batch ${Math.floor(i / batchSize) + 1}, operation ${
+            index + 1
+          }/${chunk.length}`
+        );
+        const docRef = teachersRef.doc(teacher.registration_id);
+        batch.set(docRef, teacher);
+        creationSummary.attempted++;
+      });
+
+      batches.push(batch.commit());
     }
 
-    const result = await response.json();
-    console.log("Import result:", result);
+    await Promise.all(batches);
+    creationSummary.successful = processedData.length;
+    debugLog("✅ Batch upload completed", creationSummary);
 
-    // Show results
-    showLoading(false);
-    if (result.success) {
-      showNotification(
-        `تم الاستيراد بنجاح: تمت إضافة ${result.successCount} معلم، وتحديث ${result.updateCount} معلم`,
-        "success"
-      );
+    const summary = `تم رفع ${validRecords} معلم بنجاح${
+      creationSummary.existingUpdated > 0
+        ? ` (تم تخطي ${creationSummary.existingUpdated} معلم موجود مسبقاً)`
+        : ""
+    }`;
 
-      // Hide preview section
-      previewSection.style.display = "none";
-
-      // Reset file input
-      excelFileInput.value = "";
-      selectedFileName.textContent = "";
-
-      // Reset current file data
-      currentFileData = null;
-
-      // Refresh data
-      await loadTeachers();
-    } else {
-      showNotification(`فشل الاستيراد: ${result.message}`, "error");
-    }
+    showNotification(summary, "success");
+    await fetchAndDisplayTeachers();
+    document.getElementById("previewSection").style.display = "none";
   } catch (error) {
-    console.error("Error processing file:", error);
-    showLoading(false);
-    showNotification(`خطأ: ${error.message}`, "error");
+    console.error("❌ Firebase upload error:", error);
+    debugLog("Upload error details:", {
+      message: error.message,
+      code: error.code,
+      recordsProcessed: creationSummary,
+    });
+    showNotification("حدث خطأ أثناء رفع البيانات", "error");
   }
 }
 
 // Show notification
 function showNotification(message, type = "info") {
-  if (!notificationContainer) return;
+  const container = document.getElementById("notificationContainer");
+  if (!container) return;
 
   const notification = document.createElement("div");
   notification.className = `notification ${type}`;
 
-  // Create notification with icon
-  let icon = "info-circle";
-  if (type === "success") icon = "check-circle";
-  if (type === "error") icon = "exclamation-circle";
+  const icon =
+    type === "success"
+      ? "check-circle"
+      : type === "error"
+      ? "exclamation-circle"
+      : type === "warning"
+      ? "exclamation-triangle"
+      : "info-circle";
 
   notification.innerHTML = `
     <i class="fas fa-${icon}"></i>
     <span>${message}</span>
   `;
 
-  notificationContainer.appendChild(notification);
+  container.appendChild(notification);
 
-  // Animate in
-  setTimeout(() => {
-    notification.classList.add("active");
-  }, 10);
-
-  // Auto remove after 5 seconds
   setTimeout(() => {
     notification.classList.add("fade-out");
-    setTimeout(() => {
-      notification.remove();
-    }, 300);
+    setTimeout(() => notification.remove(), 300);
   }, 5000);
 }
 
-// Show or hide loading indicator
-function showLoading(isLoading) {
-  const tableContainer = document.querySelector(".table-container");
-
-  if (tableContainer) {
-    if (isLoading) {
-      tableContainer.classList.add("loading");
-    } else {
-      tableContainer.classList.remove("loading");
-    }
-  }
-}
-
-// Set up event listeners
-function setupEventListeners() {
-  // Search input
-  if (searchInput) {
-    searchInput.addEventListener("input", function () {
-      currentPage = 1;
-      applyFilters();
-    });
-  }
-
-  // Subject filter
-  if (subjectFilter) {
-    subjectFilter.addEventListener("change", function () {
-      currentPage = 1;
-      applyFilters();
-    });
-  }
-
-  // Status filter
-  if (statusFilter) {
-    statusFilter.addEventListener("change", function () {
-      currentPage = 1;
-      applyFilters();
-    });
-  }
-
-  // Theme toggle
-  if (themeToggle) {
-    themeToggle.addEventListener("click", toggleTheme);
-  }
-
-  // Add teacher button
-  if (addTeacherBtn) {
-    addTeacherBtn.addEventListener("click", openAddTeacherModal);
-  }
-
-  // Export button
-  const exportExcelBtn = document.getElementById("exportExcelBtn");
-  if (exportExcelBtn) {
-    exportExcelBtn.addEventListener("click", exportToExcel);
-  }
-
-  // Modal close button
-  if (modalCloseBtn) {
-    modalCloseBtn.addEventListener("click", closeModal);
-  }
-
-  // Cancel modal button
-  if (cancelModalBtn) {
-    cancelModalBtn.addEventListener("click", closeModal);
-  }
-
-  // Form submission
-  if (teacherForm) {
-    teacherForm.addEventListener("submit", saveTeacher);
-  }
-
-  // Pagination buttons
-  if (prevPageBtn) {
-    prevPageBtn.addEventListener("click", function () {
-    if (currentPage > 1) {
-      currentPage--;
-      renderTeachersTable();
-      renderPagination();
-    }
-  });
-  }
-
-  if (nextPageBtn) {
-    nextPageBtn.addEventListener("click", function () {
-    const totalPages = Math.ceil(filteredTeachers.length / pageSize);
-    if (currentPage < totalPages) {
-      currentPage++;
-      renderTeachersTable();
-      renderPagination();
-    }
-  });
-  }
-}
-
-// Export teachers data to Excel
-function exportToExcel() {
+// Format date for display
+function formatDate(date) {
+  if (!date) return "";
   try {
-    if (!filteredTeachers || filteredTeachers.length === 0) {
-      showNotification("لا توجد بيانات للتصدير", "warning");
-      return;
-    }
-
-    // Prepare data for export
-    const exportData = filteredTeachers.map((teacher) => ({
-      "الرمز الوظيفي": teacher.registration_id,
-      اللقب: teacher.last_name,
-      الاسم: teacher.first_name,
-      "تاريخ الازدياد": teacher.birth_date,
-      الرتبة: teacher.role_name,
-      المادة: teacher.subject_name,
-      الدرجة: teacher.level,
-      "تاريخ السريان": teacher.start_date,
-      "رقم الهاتف": teacher.phone,
-      "البريد الإلكتروني": teacher.email,
-      الحالة: teacher.active === false ? "غير نشط" : "نشط",
-    }));
-
-    // Create worksheet
-    const ws = XLSX.utils.json_to_sheet(exportData);
-
-    // Create workbook and add worksheet
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Teachers");
-
-    // Generate Excel file
-    XLSX.writeFile(wb, "teachers_data.xlsx");
-
-    showNotification("تم تصدير البيانات بنجاح", "success");
+    return new Date(date).toLocaleDateString("ar-SA");
   } catch (error) {
-    console.error("Error exporting to Excel:", error);
-    showNotification(`خطأ في تصدير البيانات: ${error.message}`, "error");
+    return date; // Return original value if parsing fails
   }
 }
 
-// Theme management
-function checkTheme() {
-  const isDarkMode = localStorage.getItem("darkMode") === "true";
-  document.body.classList.toggle("dark-mode", isDarkMode);
-  themeToggle.querySelector("i").className = isDarkMode
-    ? "fas fa-sun"
-    : "fas fa-moon";
-}
-
-// Update API Configuration
-window.API_CONFIG = {
-  BASE_URL: "http://localhost:3000/api",
-  TEACHERS: "/teachers",
-  SUBJECTS: "/subjects",
-  TEACHER_ROLES: "/teacher-roles",
-  STATS: "/teachers/count",
-  TEACHER_IMPORT: "/teachers/import",
-};
-
-// Set up file upload
+// Set up file upload functionality
 function setupFileUpload() {
   console.log("Setting up file upload");
 
-  // Add event listener to file upload button
+  const fileUploadBtn = document.getElementById("fileUploadBtn");
+  const fileInput = document.getElementById("excelFile");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
+
+  // File upload button click handler
   if (fileUploadBtn) {
-    fileUploadBtn.addEventListener("click", handleFileUploadBtnClick);
     console.log("Added event listener to fileUploadBtn");
-  } else {
-    console.error("fileUploadBtn element not found");
-  }
-
-  // Add event listener to file input for file selection
-  if (excelFileInput) {
-  excelFileInput.addEventListener("change", handleFileChange);
-    console.log("Added event listener to excelFileInput");
-  } else {
-    console.error("excelFileInput element not found");
-  }
-
-  // Add event listeners for preview actions
-  if (uploadBtn) {
-    uploadBtn.addEventListener("click", processTeacherData);
-    console.log("Added event listener to uploadBtn");
-  } else {
-    console.error("uploadBtn element not found");
-  }
-
-  if (cancelBtn) {
-    cancelBtn.addEventListener("click", function () {
-      previewSection.style.display = "none";
-      excelFileInput.value = "";
-      selectedFileName.textContent = "";
-      currentFileData = null;
-    });
-    console.log("Added event listener to cancelBtn");
-  } else {
-    console.error("cancelBtn element not found");
-  }
-
-  // Set up drag and drop for file upload area
-  const fileUploadArea = document.querySelector(".file-upload-container");
-  if (fileUploadArea) {
-    fileUploadArea.addEventListener("dragover", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.classList.add("drag-over");
-    });
-
-    fileUploadArea.addEventListener("dragleave", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.classList.remove("drag-over");
-    });
-
-    fileUploadArea.addEventListener("drop", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.classList.remove("drag-over");
-
-      if (e.dataTransfer.files.length) {
-        excelFileInput.files = e.dataTransfer.files;
-        const event = new Event("change");
-        excelFileInput.dispatchEvent(event);
+    fileUploadBtn.addEventListener("click", () => {
+      console.log("File upload button clicked");
+      if (fileInput) {
+        console.log("Clicking the file input element");
+        fileInput.click();
       }
     });
-
-    console.log("Added drag and drop event listeners to file upload area");
-  } else {
-    console.error("File upload area element not found");
   }
+
+  // File input change handler
+  if (fileInput) {
+    console.log("Added event listener to excelFileInput");
+    fileInput.addEventListener("change", (event) => {
+      console.log("File input change event triggered");
+      handleFileSelect(event);
+    });
+  }
+
+  // Upload button click handler
+  if (uploadBtn) {
+    console.log("Added event listener to uploadBtn");
+    uploadBtn.addEventListener("click", () => {
+      if (excelData) {
+        processTeacherData(excelData);
+      } else {
+        showNotification("لا توجد بيانات للرفع", "error");
+      }
+    });
+  }
+
+  // Cancel button click handler
+  if (cancelBtn) {
+    console.log("Added event listener to cancelBtn");
+    cancelBtn.addEventListener("click", () => {
+      document.getElementById("previewSection").style.display = "none";
+      excelData = null;
+      if (fileInput) fileInput.value = "";
+      document.getElementById("selectedFileName").textContent = "";
+    });
+  }
+
+  // Set up drag and drop
+  const dropZone = document.querySelector(".file-upload-container");
+  if (dropZone) {
+    console.log("Added drag and drop event listeners to file upload area");
+
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        fileInput.files = files;
+        handleFileSelect({ target: fileInput });
+      }
+    });
+  }
+}
+
+// Firebase connection check with enhanced debugging
+async function checkFirebaseConnection() {
+  try {
+    debugLog("Checking Firebase connection...", null, "FIREBASE");
+
+    const timestamp = firebase.firestore.Timestamp.now();
+    debugLog(
+      "Firebase timestamp test successful",
+      { timestamp: timestamp.toDate() },
+      "FIREBASE"
+    );
+
+    const connectionDoc = await firebase
+      .firestore()
+      .collection("_connection_test")
+      .doc("test")
+      .set({
+        timestamp: timestamp,
+      });
+    debugLog("Firebase write test successful", null, "SUCCESS");
+
+    await firebase
+      .firestore()
+      .collection("_connection_test")
+      .doc("test")
+      .delete();
+    debugLog("Firebase connection verified", null, "SUCCESS");
+
+    return true;
+  } catch (error) {
+    debugLog(
+      "Firebase connection failed",
+      {
+        error: error.message,
+        code: error.code,
+        stack: error.stack,
+      },
+      "ERROR"
+    );
+    return false;
+  }
+}
+
+// Enhanced Excel processing debug
+function enhanceExcelDebug(workbook, rawData, headers) {
+  debugLog(
+    "Excel File Analysis",
+    {
+      sheetNames: workbook.SheetNames,
+      totalSheets: workbook.SheetNames.length,
+      activeSheet: workbook.SheetNames[0],
+      totalRows: rawData.length,
+      headerCount: headers.length,
+      headers: headers,
+    },
+    "EXCEL"
+  );
+
+  // Analyze data types in first 5 rows
+  const sampleRows = rawData.slice(1, 6);
+  const dataAnalysis = headers.map((header) => {
+    const values = sampleRows.map((row) => {
+      const value = row[headers.indexOf(header)];
+      return {
+        value: value,
+        type: typeof value,
+        isDate:
+          value &&
+          !isNaN(value) &&
+          (header.includes("تاريخ") || header.includes("date")),
+      };
+    });
+    return { header, values };
+  });
+
+  debugLog("Data Type Analysis (First 5 rows)", dataAnalysis, "EXCEL");
+}
+
+// Enhanced Firebase batch operation debugging
+function debugBatchOperation(batch, operation, data) {
+  const batchSize = operation.end - operation.start;
+  debugLog(
+    "Batch Operation Details",
+    {
+      batchNumber: operation.batchNumber,
+      totalBatches: operation.totalBatches,
+      batchSize: batchSize,
+      startIndex: operation.start,
+      endIndex: operation.end,
+      operationType: "set",
+    },
+    "FIREBASE"
+  );
+
+  // Sample of data being written
+  const sampleData = data.slice(operation.start, operation.start + 1)[0];
+  debugLog(
+    "Batch Data Sample",
+    {
+      registration_id: sampleData.registration_id,
+      name: `${sampleData.first_name} ${sampleData.last_name}`,
+      subject: sampleData.subject_ref?.path,
+      role: sampleData.role_ref?.path,
+    },
+    "DATA"
+  );
+}
+
+// Enhanced reference data debugging
+function debugReferenceData(subjects, roles) {
+  debugLog(
+    "Reference Data Summary",
+    {
+      uniqueSubjects: subjects.size,
+      uniqueRoles: roles.size,
+      subjects: Array.from(subjects),
+      roles: Array.from(roles),
+    },
+    "DATA"
+  );
+}
+
+// Add these lines after the existing processTeacherData function
+async function validateTeacherData(teacherData) {
+  const validationResults = {
+    isValid: true,
+    errors: [],
+    warnings: [],
+  };
+
+  // Required fields validation
+  const requiredFields = [
+    "registration_id",
+    "first_name",
+    "last_name",
+    "role_ref",
+    "subject_ref",
+  ];
+
+  requiredFields.forEach((field) => {
+    if (!teacherData[field]) {
+      validationResults.isValid = false;
+      validationResults.errors.push(`Missing required field: ${field}`);
+    }
+  });
+
+  // Date format validation
+  ["birth_date", "start_date"].forEach((dateField) => {
+    if (teacherData[dateField] && !isValidDate(teacherData[dateField])) {
+      validationResults.warnings.push(
+        `Invalid date format for ${dateField}: ${teacherData[dateField]}`
+      );
+    }
+  });
+
+  // Registration ID format validation
+  if (
+    teacherData.registration_id &&
+    !/^\d{10,}$/.test(teacherData.registration_id)
+  ) {
+    validationResults.warnings.push(
+      `Registration ID format may be invalid: ${teacherData.registration_id}`
+    );
+  }
+
+  debugLog(
+    "Teacher Data Validation",
+    validationResults,
+    validationResults.isValid ? "SUCCESS" : "WARNING"
+  );
+  return validationResults;
+}
+
+function isValidDate(dateString) {
+  const date = new Date(dateString);
+  return date instanceof Date && !isNaN(date);
 }

@@ -35,11 +35,27 @@ const api = {
   // Check if the backend is available
   async checkConnection() {
     try {
-      // Instead of using the health-check endpoint, try to access the students endpoint
-      const response = await fetch(`${API_CONFIG.BASE_URL}/students`);
-      return response.ok;
+      // First try the health-check endpoint
+      const response = await fetch(`${API_CONFIG.BASE_URL}/health-check`);
+      if (!response.ok) {
+        console.error("Health check failed:", response.status);
+        return false;
+      }
+      return true;
     } catch (error) {
       console.error("Connection check failed:", error);
+      // Show a more user-friendly error message
+      const errorMessage = document.createElement("div");
+      errorMessage.className = "connection-error";
+      errorMessage.innerHTML = `
+        <div class="error-content">
+          <i class="fas fa-exclamation-triangle"></i>
+          <h3>لا يمكن الاتصال بالخادم</h3>
+          <p>يرجى التأكد من تشغيل الخادم على المنفذ ${API_CONFIG.PORT}</p>
+          <button onclick="window.location.reload()">إعادة المحاولة</button>
+        </div>
+      `;
+      document.body.appendChild(errorMessage);
       return false;
     }
   },
@@ -90,10 +106,10 @@ const api = {
   async add(entityType, data) {
     try {
       const response = await fetch(`${API_CONFIG.BASE_URL}${entityType}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
 
